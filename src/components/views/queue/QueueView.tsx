@@ -16,6 +16,7 @@ import type { Queue } from "@/types/rabbit";
 import type { ViewProps } from "../types";
 import { useQueueEvents } from "./lib/events";
 import { isDlqName, maxLengthOf } from "./lib/messages";
+import { useStreamBounds } from "./lib/streamBounds";
 
 const OverviewPanel = lazy(() => import("./OverviewPanel"));
 const MessagesPanel = lazy(() => import("./MessagesPanel"));
@@ -48,6 +49,7 @@ export default function QueueView({ tab, shown }: ViewProps) {
   );
   const q = live.data;
   const events = useQueueEvents(cid, q);
+  const bounds = useStreamBounds(cid, vhost, name, shown && q?.type === "stream").data;
   const [sawDeaths, setSawDeaths] = useState(false);
   const onSawDeaths = useCallback(() => setSawDeaths(true), []);
   const [deathSummary, setDeathSummary] = useState<{ queue: string; reason: string } | null>(null);
@@ -168,8 +170,15 @@ export default function QueueView({ tab, shown }: ViewProps) {
     ? [
         { label: "Messages", value: int(q.messages), detail: "retained in the log" },
         { label: "Incoming", value: rate(pub), detail: "publish" },
-        { label: "First offset", value: int(q.first_offset), detail: "oldest kept" },
-        { label: "Committed offset", value: int(q.committed_offset), detail: "last written" },
+        { label: "First offset", value: int(q.first_offset ?? bounds?.first), detail: "oldest kept" },
+        {
+          label: "Last offset",
+          value: int(
+            q.committed_offset ??
+              (bounds?.first != null && q.messages ? bounds.first + q.messages - 1 : undefined),
+          ),
+          detail: q.committed_offset != null ? "committed" : "last written",
+        },
         { label: "Segments", value: int(q.segments), detail: "on disk" },
         { label: "Consumers", value: int(q.consumers), detail: q.consumers ? "reading" : "none attached", onClick: () => setView("consumers") },
         { label: "Memory", value: bytes(q.memory), detail: `${q.members?.length ?? 1} replicas` },
