@@ -114,6 +114,24 @@
     button("Purge");
     await sleep(2000);
     await shot("purge");
+    key("Escape");
+    await sleep(600);
+    tree("Policies");
+    await sleep(3500);
+    await shot("policies");
+    const toggleTheme = () => document.querySelector('button[aria-label^="Switch to"]')?.click();
+    toggleTheme();
+    await sleep(800);
+    tree("orders.dlq", { exact: false });
+    await sleep(3000);
+    document.querySelector('main tr[data-row="0"]')?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0 }));
+    await sleep(1200);
+    await shot("dlq-light");
+    tree("All clusters", { exact: false });
+    await sleep(3500);
+    await shot("global-light");
+    toggleTheme();
+    await sleep(500);
     await T.invoke("write_text_file", { path: "__OUT__", contents: JSON.stringify({ ok: true, shots: n }) });
     return;
   }

@@ -34,10 +34,22 @@ fn amqp_err(e: lapin::Error) -> AppError {
 
 pub async fn open(target: &AmqpTarget, vhost: &str) -> AppResult<Connection> {
     let props = ConnectionProperties::default().with_connection_name("Rabbit Studio".into());
-    tokio::time::timeout(
-        Duration::from_secs(10),
-        Connection::connect(&target.uri(vhost), props),
-    )
+    let uri = target.uri(vhost);
+    let connect = async {
+        if !target.tls || (target.ca_pem.is_none() && target.identity.is_none()) {
+            return Connection::connect(&uri, props).await;
+        }
+        // amqps with a CA of its own or a client certificate (EXTERNAL login).
+        let config = lapin::tcp::OwnedTLSConfig {
+            identity: target
+                .identity
+                .clone()
+                .map(|(pem, key)| lapin::tcp::OwnedIdentity::PKCS8 { pem, key }),
+            cert_chain: target.ca_pem.clone(),
+        };
+        Connection::connect_with_config(&uri, props, config, lapin::runtime::default_runtime()?).await
+    };
+    tokio::time::timeout(Duration::from_secs(10), connect)
     .await
     .map_err(|_| AppError::Amqp(format!("{}:{} didn't answer in time", target.host, target.port)))?
     .map_err(|e| AppError::Amqp(format!("can't open {}:{} ({e})", target.host, target.port)))
@@ -377,6 +389,9 @@ mod amqp_live {
             tls: false,
             user: "admin".into(),
             password: "admin".into(),
+            external: false,
+            ca_pem: None,
+            identity: None,
         }
     }
 

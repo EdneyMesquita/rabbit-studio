@@ -33,8 +33,12 @@ export interface SshTunnelOptions {
   privateKeyHasPassphrase: boolean;
 }
 
-/** How the app logs in: a user and password, or OAuth 2 client credentials. */
-export type AuthMethod = "password" | "oauth2";
+/**
+ * How the app logs in: a user and password, OAuth 2 client credentials, or
+ * the TLS section's client certificate (AMQP EXTERNAL; the management API
+ * behind a proxy that authenticates the certificate).
+ */
+export type AuthMethod = "password" | "oauth2" | "x509";
 
 export interface OAuth2Options {
   /** The issuer (discovery names its token endpoint), or the token endpoint. */

@@ -126,7 +126,9 @@ export function GeneralSection({ input, update, editing, autoColor }: GeneralSec
         help={
           input.auth === "oauth2"
             ? "The app gets a token from the issuer with these client credentials and renews it before it expires; RabbitMQ needs its OAuth 2 plugin."
-            : "Client certificates go in TLS: the management API itself logs in with a password or an OAuth 2 token, not a certificate."
+            : input.auth === "x509"
+              ? "Uses the client certificate and key from the TLS section. AMQP logs in with EXTERNAL (the broker takes the user from the certificate); the management API gets the certificate and no password, for a proxy in front of it that authenticates certificates."
+              : "A user of the broker; the password is kept out of the connection file."
         }
       >
         <SegmentedControl<AuthMethod>
@@ -136,11 +138,12 @@ export function GeneralSection({ input, update, editing, autoColor }: GeneralSec
           options={[
             { value: "password", label: "Password" },
             { value: "oauth2", label: "OAuth 2" },
+            { value: "x509", label: "x509 certificate" },
           ]}
         />
       </Field>
 
-      {input.auth === "oauth2" ? (
+      {input.auth === "x509" ? null : input.auth === "oauth2" ? (
         <>
           <Field label="Issuer" htmlFor="conn-issuer">
             <Input

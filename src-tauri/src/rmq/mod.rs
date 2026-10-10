@@ -39,6 +39,12 @@ pub struct AmqpTarget {
     pub tls: bool,
     pub user: String,
     pub password: String,
+    /// Log in with SASL EXTERNAL (the client certificate), no password.
+    pub external: bool,
+    /// PEM CA certificates to trust for amqps; the system's when absent.
+    pub ca_pem: Option<String>,
+    /// PEM client certificate and its PKCS#8 key, for amqps.
+    pub identity: Option<(Vec<u8>, Vec<u8>)>,
 }
 
 impl AmqpTarget {
@@ -46,6 +52,14 @@ impl AmqpTarget {
     pub fn uri(&self, vhost: &str) -> String {
         let scheme = if self.tls { "amqps" } else { "amqp" };
         let enc = |s: &str| urlencoding::encode(s).into_owned();
+        if self.external {
+            return format!(
+                "{scheme}://{}:{}/{}?auth_mechanism=external&heartbeat=30&connection_timeout=8000",
+                self.host,
+                self.port,
+                enc(vhost)
+            );
+        }
         format!(
             "{scheme}://{}:{}@{}:{}/{}?heartbeat=30&connection_timeout=8000",
             enc(&self.user),
@@ -67,6 +81,9 @@ pub struct RabbitSession {
     /// Set when the connection logs in with OAuth 2: the token replaces the
     /// password, as a bearer token and as the AMQP password.
     oauth: Option<oauth::OAuthClient>,
+    /// Certificate login: the client certificate goes with every request
+    /// (see build_client) and no Authorization header does.
+    x509: bool,
     pub read_only: bool,
     amqp: Option<AmqpTarget>,
     tunnels: Mutex<Vec<SshTunnel>>,
@@ -126,7 +143,16 @@ impl RabbitSession {
         } else {
             None
         };
-        let password = if oauth.is_none() && profile.has_password {
+        if profile.auth == AuthMethod::X509
+            && (profile.tls.cert_file.as_deref().unwrap_or("").is_empty()
+                || profile.tls.key_file.as_deref().unwrap_or("").is_empty())
+        {
+            return Err(AppError::InvalidInput(
+                "Certificate login needs a client certificate and key in the TLS section".to_string(),
+            ));
+        }
+        let x509 = profile.auth == AuthMethod::X509;
+        let password = if oauth.is_none() && !x509 && profile.has_password {
             let saved = secrets
                 .get(&profile.id, SecretKind::Password)
                 .map_err(AppError::Secret)?;
@@ -207,14 +233,27 @@ impl RabbitSession {
             user: user.clone(),
             password: password.clone(),
             oauth,
+            x509,
             read_only: profile.advanced.read_only,
-            amqp: amqp_addr.map(|(host, port)| AmqpTarget {
-                host,
-                port,
-                tls: profile.amqp.tls,
-                user: user.clone(),
-                password: password.clone().unwrap_or_default(),
-            }),
+            amqp: match amqp_addr {
+                Some((host, port)) => Some(AmqpTarget {
+                    host,
+                    port,
+                    tls: profile.amqp.tls,
+                    user: user.clone(),
+                    password: password.clone().unwrap_or_default(),
+                    external: profile.auth == AuthMethod::X509,
+                    ca_pem: read_optional(profile.tls.ca_file.as_deref())?.map(|b| String::from_utf8_lossy(&b).into_owned()),
+                    identity: match (
+                        read_optional(profile.tls.cert_file.as_deref())?,
+                        read_optional(profile.tls.key_file.as_deref())?,
+                    ) {
+                        (Some(cert), Some(key)) => Some((cert, key)),
+                        _ => None,
+                    },
+                }),
+                None => None,
+            },
             tunnels: Mutex::new(tunnels),
         };
         match session.server_info().await {
@@ -280,6 +319,7 @@ impl RabbitSession {
         let mut req = self.http.request(method, &url);
         req = match &self.oauth {
             Some(oauth) => req.bearer_auth(oauth.token().await?),
+            None if self.x509 => req,
             None => req.basic_auth(&self.user, self.password.as_deref()),
         };
         if let Some(body) = body {
@@ -342,6 +382,16 @@ fn allowed_when_read_only(method: &Method, path: &str, body: Option<&Value>) -> 
             .and_then(|b| b.get("ackmode"))
             .and_then(Value::as_str)
             == Some("ack_requeue_true")
+}
+
+/// A file's bytes when a path is set.
+fn read_optional(path: Option<&str>) -> AppResult<Option<Vec<u8>>> {
+    match path.filter(|p| !p.trim().is_empty()) {
+        Some(p) => std::fs::read(p)
+            .map(Some)
+            .map_err(|e| AppError::InvalidInput(format!("can't read {p}: {e}"))),
+        None => Ok(None),
+    }
 }
 
 fn tunnel_auth(
@@ -504,7 +554,12 @@ mod tests {
             tls: false,
             user: "a@b".into(),
             password: "p/w".into(),
+            external: false,
+            ca_pem: None,
+            identity: None,
         };
         assert!(t.uri("/").starts_with("amqp://a%40b:p%2Fw@mq:5672/%2F?"));
+        let ext = AmqpTarget { external: true, tls: true, ..t };
+        assert!(ext.uri("orders").starts_with("amqps://mq:5672/orders?auth_mechanism=external"));
     }
 }

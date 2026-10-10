@@ -93,6 +93,11 @@ pub enum AuthMethod {
     /// OAuth 2 client credentials: the app gets a token from the issuer and
     /// sends it as a bearer token (and as the AMQP password).
     Oauth2,
+    /// The client certificate of the TLS section: AMQP logs in with SASL
+    /// EXTERNAL (the broker takes the user from the certificate), and the
+    /// management API gets the certificate and no password - for brokers
+    /// whose management API sits behind a proxy that authenticates it.
+    X509,
 }
 
 /// The OAuth 2 client the app logs in as. The secret is in the secret store.
