@@ -259,7 +259,8 @@ impl RabbitSession {
         let status = response.status();
         let bytes = response.bytes().await.map_err(|e| http_error(&e))?;
         if status.is_success() {
-            return Ok(bytes.to_vec());
+            // Zero-copy when the buffer is not shared.
+            return Ok(Vec::from(bytes));
         }
         Err(server_error(status.as_u16(), &bytes, &self.user))
     }

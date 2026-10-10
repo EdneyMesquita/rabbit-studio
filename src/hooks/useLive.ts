@@ -50,6 +50,40 @@ export const useLiveStore = create<LiveState>((set) => ({
   lastBeat: 0,
 }));
 
+/**
+ * `next` with every part equal to `prev` replaced by `prev`'s own object, so
+ * an unchanged poll keeps its identity and memoized rows don't re-render.
+ */
+export function share<T>(prev: unknown, next: T): T {
+  if (prev === next) return next;
+  if (Array.isArray(prev) && Array.isArray(next)) {
+    let same = prev.length === next.length;
+    const out = next.map((v, i) => {
+      const r = share(prev[i], v);
+      if (r !== prev[i]) same = false;
+      return r;
+    });
+    return (same ? prev : out) as T;
+  }
+  if (isPlain(prev) && isPlain(next)) {
+    const pk = Object.keys(prev);
+    const nk = Object.keys(next);
+    let same = pk.length === nk.length;
+    const out: Record<string, unknown> = {};
+    for (const k of nk) {
+      const r = share(prev[k], next[k]);
+      out[k] = r;
+      if (r !== prev[k]) same = false;
+    }
+    return (same ? prev : out) as T;
+  }
+  return next;
+}
+
+function isPlain(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype;
+}
+
 function hidden(): boolean {
   return typeof document !== "undefined" && document.visibilityState === "hidden";
 }
@@ -74,10 +108,11 @@ async function run(key: string, force = false): Promise<void> {
   if (e.inflight) return e.inflight;
   if (!force && (e.active <= 0 || hidden() || useLiveStore.getState().paused)) return;
   e.loading = true;
-  notify(e);
+  // Only the first load shows a spinner; a refresh notifies once, when done.
+  if (e.updatedAt === 0) notify(e);
   e.inflight = (async () => {
     try {
-      e.data = await e.fetcher();
+      e.data = share(e.data, await e.fetcher());
       e.error = null;
       e.updatedAt = Date.now();
       e.failures = 0;

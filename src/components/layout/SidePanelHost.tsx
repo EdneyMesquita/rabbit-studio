@@ -21,8 +21,9 @@ export function SidePanelHost() {
       <div className={panel === "explorer" ? "h-full" : "hidden"}>
         <Sidebar />
       </div>
-      {problemsShown && (
-        <div className={panel === "problems" ? "flex h-full flex-col" : "hidden"}>
+      {/* Mounted only while shown: it polls every connected cluster. */}
+      {problemsShown && panel === "problems" && (
+        <div className="flex h-full flex-col">
           <Suspense fallback={<Loading />}>
             <ProblemsPanel />
           </Suspense>

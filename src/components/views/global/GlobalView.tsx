@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { Fragment, memo, useCallback, useMemo, useState } from "react";
 import { LayoutGrid } from "lucide-react";
 import { samplesOf } from "@/components/charts/TimeSeriesChart";
 import { Metrics, SectionHeader, StateLabel, ViewTitle, ViewToolbar, type MetricItem, type Tone } from "@/components/data/parts";
@@ -31,15 +31,18 @@ interface Entry {
   error: string | null;
 }
 
+interface Part<T> {
+  data?: T;
+  error: string | null;
+}
+
 // Only totals and five minutes of queue depth: the cheapest answer that fills a row.
 const OVERVIEW_COLUMNS = "cluster_name,rabbitmq_version,queue_totals,object_totals,message_stats.publish_details.rate,message_stats.deliver_get_details.rate";
 
-async function fetchSnapshot(connectionId: string): Promise<Snapshot> {
-  const [overview, inputs] = await Promise.all([
-    rabbit(connectionId).get<Overview>(withQuery(paths.overview, { columns: OVERVIEW_COLUMNS, lengths_age: 300, lengths_incr: 10 })),
-    fetchProblemInputs(connectionId),
-  ]);
-  return { overview, inputs };
+function fetchOverview(connectionId: string): Promise<Overview> {
+  return rabbit(connectionId).get<Overview>(
+    withQuery(paths.overview, { columns: OVERVIEW_COLUMNS, lengths_age: 300, lengths_incr: 10 }),
+  );
 }
 
 type Health = { tone: Tone; label: string };
@@ -58,11 +61,29 @@ export default function GlobalView({ shown }: ViewProps) {
   const connecting = useConnectionsStore((s) => s.connecting);
   const connectErrors = useConnectionsStore((s) => s.connectErrors);
   const connected = useMemo(() => profiles.filter((p) => sessions[p.id]), [profiles, sessions]);
-  const [entries, setEntries] = useState<Record<string, Entry | undefined>>({});
-
-  const onData = useCallback((id: string, data: Snapshot | undefined, error: string | null) => {
-    setEntries((s) => (s[id]?.data === data && s[id]?.error === error ? s : { ...s, [id]: { data, error } }));
+  // Two answers per cluster: its overview, and the problem inputs under the
+  // key the Problems panel and the cluster overview share (one fetch for all).
+  const [overviews, setOverviews] = useState<Record<string, Part<Overview> | undefined>>({});
+  const [inputsBy, setInputsBy] = useState<Record<string, Part<ProblemInputs> | undefined>>({});
+  const onOverview = useCallback((id: string, data: Overview | undefined, error: string | null) => {
+    setOverviews((s) => (s[id]?.data === data && s[id]?.error === error ? s : { ...s, [id]: { data, error } }));
   }, []);
+  const onInputs = useCallback((id: string, data: ProblemInputs | undefined, error: string | null) => {
+    setInputsBy((s) => (s[id]?.data === data && s[id]?.error === error ? s : { ...s, [id]: { data, error } }));
+  }, []);
+  const entries = useMemo(() => {
+    const out: Record<string, Entry | undefined> = {};
+    for (const id of new Set([...Object.keys(overviews), ...Object.keys(inputsBy)])) {
+      const o = overviews[id];
+      const i = inputsBy[id];
+      if (!o && !i) continue;
+      out[id] = {
+        data: o?.data && i?.data ? { overview: o.data, inputs: i.data } : undefined,
+        error: o?.error ?? i?.error ?? null,
+      };
+    }
+    return out;
+  }, [overviews, inputsBy]);
 
   const problems = useClusterProblems(
     connected,
@@ -132,14 +153,22 @@ export default function GlobalView({ shown }: ViewProps) {
     <div className="flex h-full min-h-0 flex-col bg-editor">
       {shown &&
         connected.map((p) => (
-          <ClusterProbe<Snapshot>
-            key={p.id}
-            connectionId={p.id}
-            liveKey={`${p.id}:overview:global`}
-            fetcher={() => fetchSnapshot(p.id)}
-            onData={onData}
-            interval={10_000}
-          />
+          <Fragment key={p.id}>
+            <ClusterProbe<Overview>
+              connectionId={p.id}
+              liveKey={`${p.id}:overview:global`}
+              fetcher={() => fetchOverview(p.id)}
+              onData={onOverview}
+              interval={10_000}
+            />
+            <ClusterProbe<ProblemInputs>
+              connectionId={p.id}
+              liveKey={`${p.id}:problems`}
+              fetcher={() => fetchProblemInputs(p.id)}
+              onData={onInputs}
+              interval={10_000}
+            />
+          </Fragment>
         ))}
       <ViewToolbar>
         <ViewTitle icon={LayoutGrid} name="All clusters" kind="Workspace" />
