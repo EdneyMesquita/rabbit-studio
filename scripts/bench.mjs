@@ -10,7 +10,6 @@
 //
 // Needs a `bench` database on the connection's server with a `big` table:
 //   create table big as select g as id, md5(g::text) as hash, ... from generate_series(1, 1000000) g;
-// (see the README's Benchmarks section for the exact statement).
 
 import { execSync } from "node:child_process";
 import { writeFileSync } from "node:fs";

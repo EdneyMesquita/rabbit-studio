@@ -16,9 +16,9 @@ labels: bug
 
 **Environment**
 
-- Postgres Studio version:
+- Rabbit Studio version:
 - OS:
-- PostgreSQL server version (if relevant):
+- RabbitMQ server version (if relevant):
 
 **Logs / screenshots**
 

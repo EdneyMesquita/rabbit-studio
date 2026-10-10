@@ -1,4 +1,4 @@
-# Contributing to Postgres Studio
+# Contributing to Rabbit Studio
 
 Thanks for taking a look! This project is small and young, so the process is intentionally lightweight.
 
@@ -26,7 +26,7 @@ See the [README](README.md#development) for prerequisites and how to run the app
 
 ## Scope of tests in CI
 
-Integration tests that talk to a live PostgreSQL server are marked `#[ignore]` and are **not** run in CI (there's no database available there). If your change touches connection/query/scripting/export logic, please also run the relevant ignored test(s) locally against a real database and mention that you did in the PR description - see [README](README.md#development) for how.
+CI runs the unit tests only; there is no RabbitMQ broker in CI. If your change touches connection, publish or queue-management logic, please also run it locally against the dev servers from `docker-compose.dev.yml` and mention that in the PR description.
 
 ## Reporting bugs / requesting features
 

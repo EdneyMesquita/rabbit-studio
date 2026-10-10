@@ -263,7 +263,7 @@ components:
     size: "6px"
 ---
 
-<!-- Recorded 2026-10-10 from the shipped mockup rabbit-studio.html. The visual world is inherited verbatim from the family: postgres-studio/DESIGN.md (and mongo-studio/DESIGN.md), "The Data IDE". The mockup inlines the siblings' base.css unchanged (byte-identical), experiments.css, the relational style block and shared.js; Rabbit's own rules sit at the end of its <style> block after "Rabbit Studio additions". The tokens above repeat the sibling's frontmatter unchanged and add only the chart series, the app-mark tint and the Rabbit components. A change to an inherited token is a family change and belongs in the sibling first.
+<!-- Recorded 2026-10-10 from the shipped mockup rabbit-studio.html. The visual world is inherited verbatim from the family: the SQL sibling's DESIGN.md (and mongo-studio/DESIGN.md), "The Data IDE". The mockup inlines the siblings' base.css unchanged (byte-identical), experiments.css, the relational style block and shared.js; Rabbit's own rules sit at the end of its <style> block after "Rabbit Studio additions". The tokens above repeat the sibling's frontmatter unchanged and add only the chart series, the app-mark tint and the Rabbit components. A change to an inherited token is a family change and belongs in the sibling first.
 Open decision: UI copy is English to match the siblings (Claude's call on 2026-10-10), confirmed by the user on 2026-10-10. RabbitMQ terms stay verbatim in either language. -->
 
 # Design System: Rabbit Studio
@@ -272,7 +272,7 @@ Open decision: UI copy is English to match the siblings (Claude's call on 2026-1
 
 **Creative North Star: "The Data IDE"**
 
-Rabbit Studio is the third sibling of Mongo Studio and Postgres Studio and inherits their world without change: a category-standard desktop developer tool, dense, quiet and exact. 13px Inter chrome, JetBrains Mono for every piece of data, 24px rows, 16px line icons, and a neutral stack of near-blacks (or near-whites) separated by hairline rules. It is an IDE frame (toolbar, tool stripe, Explorer, editor tabs, status bar), not a web dashboard: there is no sidebar of pages and no KPI cards. Queues read like tables, messages like rows, and a message's properties, headers and payload like the typed row inspector.
+Rabbit Studio is the third sibling of Mongo Studio and the SQL sibling and inherits their world without change: a category-standard desktop developer tool, dense, quiet and exact. 13px Inter chrome, JetBrains Mono for every piece of data, 24px rows, 16px line icons, and a neutral stack of near-blacks (or near-whites) separated by hairline rules. It is an IDE frame (toolbar, tool stripe, Explorer, editor tabs, status bar), not a web dashboard: there is no sidebar of pages and no KPI cards. Queues read like tables, messages like rows, and a message's properties, headers and payload like the typed row inspector.
 
 The one loud signal is still place. Every cluster is a connection with its own color, and that color rides on the toolbar's leading edge, the tab underline, the initials chip and the status bar, so a production tab never looks like a local one. Clusters sit in environment folders (Production, Staging, Local) in the Explorer. Beyond identity, color is spent on the single blue for selection and primary action, on ok / warn / danger for health, on syntax color for typed values, and on three validated series hues in charts. Problems surface first: unhealthy queues, nodes and clusters carry warn or danger marks in the tree, notices at the top of the editor, and a problems list.
 
@@ -312,7 +312,7 @@ The sibling's JetBrains-derived neutral stack in twin themes, one blue accent, t
 - Inherited eight swatches. The shipped clusters use **Red** for Production SA (PS), **Magenta** for Production US (PU), **Amber** for Staging (ST), **Slate** for QA ephemeral (QA) and **Green** for Local dev (LD); a new connection defaults to **Teal**. Production clusters take the hot hues by convention, not by rule: the folder, the lock mark and the typed guard carry the environment, the color carries the connection.
 
 ### App mark
-- **Mark Peach / Mark Orange / Mark Rim** (mark-top, mark-body, mark-rim): the family's rounded-square mark with Rabbit's own object, a rabbit head (Mongo Studio has a cylinder, Postgres Studio a table); the source is icons/icon-source.svg. Used only inside the app mark; never as an interface color.
+- **Mark Peach / Mark Orange / Mark Rim** (mark-top, mark-body, mark-rim): the family's rounded-square mark with Rabbit's own object, a rabbit head (Mongo Studio has a cylinder, the SQL sibling a table); the source is icons/icon-source.svg. Used only inside the app mark; never as an interface color.
 
 ### Neutral
 - Inherited unchanged: **Editor**, **Panel**, **Seam**, **Line / Line Soft**, **Field Line**, **Row Hover / Hover**, **Text / Text 2 / Text 3**, same roles as the sibling. Group rows in tables take the panel tone.

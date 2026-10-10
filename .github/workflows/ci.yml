@@ -39,8 +39,6 @@ jobs:
         working-directory: src-tauri
         run: cargo clippy --all-targets --features devbridge -- -D warnings
 
-      # Integration tests that hit a live database are marked #[ignore] and
-      # skipped here - they need POSTGRES_STUDIO_TEST_URI, which CI doesn't have.
       - name: cargo test
         working-directory: src-tauri
         run: cargo test

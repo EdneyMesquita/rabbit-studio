@@ -133,10 +133,10 @@ jobs:
     permissions:
       contents: write # the msstore/vX.Y.Z tag
     env:
-      IDENTITY_NAME: ${{ vars.MSSTORE_IDENTITY_NAME || 'PostgresStudio.Placeholder' }}
+      IDENTITY_NAME: ${{ vars.MSSTORE_IDENTITY_NAME || 'RabbitStudio.Placeholder' }}
       PUBLISHER: ${{ vars.MSSTORE_PUBLISHER || 'CN=Placeholder' }}
       PUBLISHER_DISPLAY_NAME: ${{ vars.MSSTORE_PUBLISHER_DISPLAY_NAME || 'Placeholder' }}
-      DISPLAY_NAME: ${{ vars.MSSTORE_DISPLAY_NAME || 'Postgres Studio' }}
+      DISPLAY_NAME: ${{ vars.MSSTORE_DISPLAY_NAME || 'Rabbit Studio' }}
       PLACEHOLDER: ${{ vars.MSSTORE_IDENTITY_NAME == '' }}
     steps:
       # The release's source. Empty repo and tag (pull requests) mean the

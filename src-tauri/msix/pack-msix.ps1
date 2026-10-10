@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Packs the built Postgres Studio executable into an MSIX for the Microsoft Store.
+  Packs the built Rabbit Studio executable into an MSIX for the Microsoft Store.
 
 .DESCRIPTION
   Run after `npx tauri build --no-bundle` on Windows. Lays out the package
@@ -12,7 +12,7 @@
   management > Product identity.
 
 .EXAMPLE
-  ./src-tauri/msix/pack-msix.ps1 -IdentityName "12345Edney.PostgresStudio" `
+  ./src-tauri/msix/pack-msix.ps1 -IdentityName "12345Edney.RabbitStudio" `
     -Publisher "CN=00000000-0000-0000-0000-000000000000" -PublisherDisplayName "Edney"
 #>
 param(
@@ -20,7 +20,7 @@ param(
   [Parameter(Mandatory)] [string] $Publisher,
   [Parameter(Mandatory)] [string] $PublisherDisplayName,
   # The name reserved in Partner Center.
-  [string] $DisplayName = "Postgres Studio",
+  [string] $DisplayName = "Rabbit Studio",
   [ValidateSet("x64", "arm64")] [string] $Arch = "x64",
   # Defaults to tauri.conf.json's version, as MSIX's four parts.
   [string] $Version,
@@ -42,8 +42,8 @@ $msixVersion = "{0}.{1}.{2}.0" -f $parts[0], $parts[1], $parts[2]
 
 $target = if ($Arch -eq "arm64") { "aarch64-pc-windows-msvc" } else { $null }
 $releaseDir = if ($target) { Join-Path $tauri "target/$target/release" } else { Join-Path $tauri "target/release" }
-$exe = Get-ChildItem $releaseDir -Filter "postgres-studio.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not $exe) { throw "No postgres-studio.exe in $releaseDir. Run 'npx tauri build --no-bundle' first." }
+$exe = Get-ChildItem $releaseDir -Filter "rabbit-studio.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $exe) { throw "No rabbit-studio.exe in $releaseDir. Run 'npx tauri build --no-bundle' first." }
 
 $layout = Join-Path $root "$OutDir/layout-$Arch"
 if (Test-Path $layout) { Remove-Item $layout -Recurse -Force }
@@ -75,7 +75,7 @@ $makeappx = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\ma
   Sort-Object { [version]($_.Directory.Parent.Name) } -Descending | Select-Object -First 1
 if (-not $makeappx) { throw "makeappx.exe not found: install the Windows 10/11 SDK." }
 
-$package = Join-Path $root "$OutDir/PostgresStudio_${msixVersion}_$Arch.msix"
+$package = Join-Path $root "$OutDir/RabbitStudio_${msixVersion}_$Arch.msix"
 & $makeappx.FullName pack /d $layout /p $package /o /h SHA256
 if ($LASTEXITCODE -ne 0) { throw "makeappx failed with exit code $LASTEXITCODE" }
 Write-Host "Packed $package ($IdentityName $msixVersion, $Arch)"
