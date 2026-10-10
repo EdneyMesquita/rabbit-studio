@@ -16,8 +16,7 @@ dist-ssr
 !.env.example
 
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
+.vscode
 .idea
 .DS_Store
 *.suo
@@ -28,4 +27,11 @@ dist-ssr
 src-tauri/target
 src-tauri/target-bench
 src-tauri/gen
-.claude/scheduled_tasks.lock
+
+# Local tooling and working files (design reviews, agent settings, captured fixtures)
+.impeccable
+.claude
+fixtures
+docs/IMPLEMENTATION.md
+docs/parity.md
+scripts/capture-tour.sh

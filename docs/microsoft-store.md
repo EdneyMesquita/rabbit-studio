@@ -40,7 +40,7 @@ In Partner Center, open the app and start a submission:
 2. **Properties:**
    - **Category:** *Developer tools*.
    - **Privacy policy URL:** the address of the [`PRIVACY.md`](../PRIVACY.md) text published on the project site. It's required because the app connects to the network. Don't use a github.com link to the file: automated fetchers, the Store's validator among them, get an error page without the policy. When `PRIVACY.md` changes, update the site's copy too.
-   - **Support contact:** edneyphp@gmail.com, or the repository's issues page once it is public.
+   - **Support contact:** edneyphp@gmail.com, or the repository's issues page (<https://github.com/EdneyMesquita/rabbit-studio/issues>).
 3. **Age ratings:** the questionnaire. It's a developer tool with no user-generated content shared between users.
 4. **Packages:** upload the `.msix` and keep the *Desktop* device family.
 5. **Store listings:**
