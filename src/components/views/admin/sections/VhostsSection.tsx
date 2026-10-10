@@ -86,6 +86,19 @@ function clusterState(v: Vhost): { tone: "ok" | "warn" | "idle"; text: string } 
 
 export default function VhostsSection({ cid, tab, shown }: SectionProps) {
   const live = useLive<VhostRow[]>(`${cid}:admin:vhosts`, () => load(cid), { enabled: shown });
+  // Queues per vhost: one page of one row each, read for its filtered_count.
+  const vhostNames = useMemo(() => (live.data ?? []).map((r) => r.name).join("\u0000"), [live.data]);
+  const queueCounts = useLive<Record<string, number>>(
+    vhostNames ? `${cid}:admin:vhost-queue-counts:${vhostNames}` : null,
+    async () => {
+      const names = vhostNames.split("\u0000");
+      const pages = await Promise.all(
+        names.map((v) => rabbit(cid).get<{ filtered_count: number }>(withQuery(paths.queues(v), { columns: "name", page: 1, page_size: 1 }))),
+      );
+      return Object.fromEntries(names.map((v, i) => [v, pages[i]?.filtered_count ?? 0]));
+    },
+    { interval: 30_000, enabled: shown },
+  );
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const readOnly = isReadOnly(cid);
@@ -98,18 +111,19 @@ export default function VhostsSection({ cid, tab, shown }: SectionProps) {
 
   const columns = useMemo<Column<VhostRow>[]>(
     () => [
-      { id: "name", header: "name", width: 170, cell: (r) => r.name, sortValue: (r) => r.name },
-      { id: "description", header: "description", width: 240, mono: false, cell: (r) => r.v.description || r.v.metadata?.description || <Dash />, sortValue: (r) => r.v.description },
+      { id: "name", header: "name", width: 150, cell: (r) => r.name, sortValue: (r) => r.name },
+      { id: "description", header: "description", width: 180, mono: false, cell: (r) => r.v.description || r.v.metadata?.description || <Dash />, sortValue: (r) => r.v.description },
+      { id: "type", header: "queue type", width: 96, cell: (r) => r.queueType, sortValue: (r) => r.queueType },
+      { id: "queues", header: "queues", align: "right", width: 72, cell: (r) => (queueCounts.data?.[r.name] == null ? <Dash /> : int(queueCounts.data[r.name])), sortValue: (r) => queueCounts.data?.[r.name] },
+      { id: "ready", header: "ready", align: "right", width: 84, cell: (r) => int(r.v.messages_ready), sortValue: (r) => r.v.messages_ready },
+      { id: "unacked", header: "unacked", align: "right", width: 90, cell: (r) => int(r.v.messages_unacknowledged), sortValue: (r) => r.v.messages_unacknowledged },
+      { id: "total", header: "total", align: "right", width: 90, cell: (r) => int(r.v.messages), sortValue: (r) => r.v.messages },
       {
         id: "tags",
         header: "tags",
         width: 140,
         cell: (r) => (r.tags.length ? <span className="inline-flex gap-1">{r.tags.map((t) => <Tag key={t}>{t}</Tag>)}</span> : <Dash />),
       },
-      { id: "type", header: "queue type", width: 100, cell: (r) => r.queueType, sortValue: (r) => r.queueType },
-      { id: "ready", header: "ready", align: "right", width: 90, cell: (r) => int(r.v.messages_ready), sortValue: (r) => r.v.messages_ready },
-      { id: "unacked", header: "unacked", align: "right", width: 90, cell: (r) => int(r.v.messages_unacknowledged), sortValue: (r) => r.v.messages_unacknowledged },
-      { id: "total", header: "total", align: "right", width: 90, cell: (r) => int(r.v.messages), sortValue: (r) => r.v.messages },
       {
         id: "in",
         header: "publish",
@@ -137,7 +151,7 @@ export default function VhostsSection({ cid, tab, shown }: SectionProps) {
         },
       },
     ],
-    [],
+    [queueCounts.data],
   );
 
   const deleteVhost = useCallback(

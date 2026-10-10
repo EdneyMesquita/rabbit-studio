@@ -46,7 +46,7 @@ Most of it is the WebKitGTK baseline every Tauri app on Linux pays.
 ## Live use, release build (native window, WebKitGTK)
 
 `cargo` feature `smoke` + `RABBIT_STUDIO_SMOKE_MODE=load`: the window
-connects every saved cluster (4: two 4.2, one 3.13, one read-only 4.2) and
+connects every saved cluster (4: dev cluster A on 4.2, dev cluster B on 3.13, a read-only 4.2 and a scratch 3.13) and
 opens the global view with the Explorer showing; CPU is then sampled per
 thread from `/proc` for 60 s of steady state (`scripts/measure-live.sh`),
 memory as PSS.

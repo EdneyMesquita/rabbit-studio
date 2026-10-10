@@ -54,20 +54,20 @@ const ADMIN_ICONS: Record<AdminSection, LucideIcon> = {
 
 const topColumns: Column<Queue>[] = [
   { id: "name", header: "queue", cell: (q) => q.name },
-  { id: "vhost", header: "vhost", width: 130, cell: (q) => <span className="text-fg-3">{q.vhost}</span> },
+  { id: "vhost", header: "vhost", width: 110, cell: (q) => <span className="text-fg-3">{q.vhost}</span> },
   {
     id: "state",
     header: "state",
-    width: 160,
+    width: 136,
     mono: false,
     cell: (q) => {
       const s = queueStatus(q);
       return <StateLabel tone={s.tone}>{s.label}</StateLabel>;
     },
   },
-  { id: "ready", header: "ready", align: "right", width: 90, cell: (q) => <Zero n={q.messages_ready} /> },
-  { id: "in", header: "in", align: "right", width: 80, cell: (q) => <RateCell rate={q.message_stats?.publish_details?.rate} /> },
-  { id: "out", header: "out", align: "right", width: 80, cell: (q) => <RateCell rate={q.message_stats?.deliver_get_details?.rate} /> },
+  { id: "ready", header: "ready", align: "right", width: 72, cell: (q) => <Zero n={q.messages_ready} /> },
+  { id: "in", header: "in", align: "right", width: 60, cell: (q) => <RateCell rate={q.message_stats?.publish_details?.rate} /> },
+  { id: "out", header: "out", align: "right", width: 60, cell: (q) => <RateCell rate={q.message_stats?.deliver_get_details?.rate} /> },
 ];
 
 type Mode = "overview" | "nodes";

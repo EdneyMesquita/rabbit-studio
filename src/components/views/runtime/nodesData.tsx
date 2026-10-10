@@ -50,7 +50,7 @@ const nodes: Column<NodeRow>[] = [
   {
     id: "mem",
     header: "memory",
-    width: 230,
+    width: 210,
     sortValue: (n) => (n.mem_limit ? (n.mem_used ?? 0) / n.mem_limit : 0),
     cell: (n) =>
       n.running === false ? (
@@ -65,16 +65,16 @@ const nodes: Column<NodeRow>[] = [
   {
     id: "disk",
     header: "disk free",
-    width: 190,
+    width: 100,
     sortValue: (n) => n.disk_free,
     cell: (n) => (
-      <span className={n.disk_free_alarm ? "text-danger" : undefined}>
-        {bytes(n.disk_free)} <span className="text-fg-3">limit {bytes(n.disk_free_limit)}</span>
+      <span className={n.disk_free_alarm ? "text-danger" : undefined} title={`Alarm below ${bytes(n.disk_free_limit)}`}>
+        {bytes(n.disk_free)}
       </span>
     ),
   },
-  { id: "fd", header: "fds", align: "right", width: 80, sortValue: (n) => n.fd_used, cell: (n) => int(n.fd_used) },
-  { id: "sockets", header: "sockets", align: "right", width: 80, sortValue: (n) => n.sockets_used, cell: (n) => int(n.sockets_used) },
+  { id: "fd", header: "fds", align: "right", width: 64, sortValue: (n) => n.fd_used, cell: (n) => int(n.fd_used) },
+  { id: "sockets", header: "sockets", align: "right", width: 72, sortValue: (n) => n.sockets_used, cell: (n) => int(n.sockets_used) },
   { id: "procs", header: "erlang procs", align: "right", width: 100, sortValue: (n) => n.proc_used, cell: (n) => int(n.proc_used) },
   { id: "uptime", header: "uptime", align: "right", width: 100, sortValue: (n) => n.uptime, cell: (n) => <span className="text-fg-3">{duration(n.uptime)}</span> },
   {
