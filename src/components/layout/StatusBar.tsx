@@ -1,4 +1,5 @@
 import { Lock, Plug, ShieldAlert } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { ConnectionChip } from "@/components/ui/ConnectionChip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -33,6 +34,16 @@ function LiveIndicator() {
   const paused = useLiveStore((s) => s.paused);
   const lastBeat = useLiveStore((s) => s.lastBeat);
   const seconds = DEFAULT_INTERVAL / 1000;
+  // A beat is a ring that shows, then goes: two paints, no animation. On
+  // WebKitGTK even a tiny keyframe animation repaints the window at 60 fps,
+  // which cost more than all the polling it reports on.
+  const [ring, setRing] = useState(false);
+  useEffect(() => {
+    if (paused || !lastBeat) return;
+    setRing(true);
+    const t = window.setTimeout(() => setRing(false), 700);
+    return () => window.clearTimeout(t);
+  }, [lastBeat, paused]);
   return (
     <button
       type="button"
@@ -42,9 +53,12 @@ function LiveIndicator() {
       onClick={() => useLiveStore.getState().setPaused(!paused)}
     >
       <span
-        key={paused ? "paused" : lastBeat}
         aria-hidden
-        className={cn("size-1.5 rounded-full", paused ? "bg-fg-3/60" : "live-beat bg-ok")}
+        className={cn(
+          "size-1.5 rounded-full",
+          paused ? "bg-fg-3/60" : "bg-ok",
+          ring && !paused && "shadow-[0_0_0_2.5px_color-mix(in_srgb,var(--color-ok)_35%,transparent)]",
+        )}
       />
       {paused ? "Paused" : `Live · ${seconds}s`}
     </button>

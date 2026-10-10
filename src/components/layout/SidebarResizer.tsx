@@ -17,7 +17,8 @@ export function clampSidebarWidth(width: number) {
 
 /** The draggable right edge of the side panel. */
 export function SidebarResizer() {
-  const width = useUiStore((s) => s.sidebarWidth);
+  // What shows (the saved width fitted to the window), so a drag starts there.
+  const width = clampSidebarWidth(useUiStore((s) => s.sidebarWidth));
   const setWidth = useUiStore((s) => s.setSidebarWidth);
   // Width at press time and pointer offset, so the edge tracks the pointer
   // from wherever it was grabbed.

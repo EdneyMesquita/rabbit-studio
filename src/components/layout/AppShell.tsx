@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useUiStore } from "../../store/uiStore";
 import { SidebarResizer, clampSidebarWidth } from "./SidebarResizer";
@@ -25,17 +25,17 @@ export function AppShell({ toolbar, stripe, sidePanel, statusBar, children }: Ap
   const panelOpen = useUiStore((s) => s.sidePanel !== null);
 
   // A width saved on a bigger screen, or a window shrunk since, mustn't
-  // leave the sidebar taking over the main area.
+  // leave the sidebar taking over the main area - but that is only how it
+  // shows: the saved width stays the user's. (Fitting the saved value
+  // itself shrank it for good whenever the window started small, as it
+  // does while still hidden.)
+  const [, setViewport] = useState(0);
   useEffect(() => {
-    function fit() {
-      const { sidebarWidth: width, setSidebarWidth } = useUiStore.getState();
-      const fitted = clampSidebarWidth(width);
-      if (fitted !== width) setSidebarWidth(fitted);
-    }
-    fit();
-    window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
+    const onResize = () => setViewport(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
+  const shownWidth = clampSidebarWidth(sidebarWidth);
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-editor text-fg">
@@ -47,7 +47,7 @@ export function AppShell({ toolbar, stripe, sidePanel, statusBar, children }: Ap
           className={`relative flex shrink-0 flex-col border-r border-seam bg-panel max-[960px]:absolute max-[960px]:inset-y-0 max-[960px]:left-10 max-[960px]:z-30 max-[960px]:shadow-overlay ${
             panelOpen ? "" : "hidden"
           }`}
-          style={{ width: sidebarWidth }}
+          style={{ width: shownWidth }}
         >
           <div className="min-h-0 flex-1 overflow-y-auto">{sidePanel}</div>
           <SidebarResizer />

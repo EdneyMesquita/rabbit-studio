@@ -127,7 +127,7 @@ fn setup<R: tauri::Runtime>(app: &mut tauri::App<R>) -> Result<(), Box<dyn std::
             }
         });
     }
-    #[cfg(debug_assertions)]
+    #[cfg(any(debug_assertions, feature = "smoke"))]
     smoke(app);
     let state =
         AppState::init(&config_dir).map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
@@ -138,10 +138,10 @@ fn setup<R: tauri::Runtime>(app: &mut tauri::App<R>) -> Result<(), Box<dyn std::
     Ok(())
 }
 
-/// Debug builds: with `RABBIT_STUDIO_SMOKE=<file>`, runs `smoke.js` in the
+/// Debug builds (or `--features smoke`): with `RABBIT_STUDIO_SMOKE=<file>`, runs `smoke.js` in the
 /// window once it has loaded - the real IPC, end to end - and the script
 /// writes what it saw to `<file>`.
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature = "smoke"))]
 fn smoke<R: tauri::Runtime>(app: &tauri::App<R>) {
     let Ok(out) = std::env::var("RABBIT_STUDIO_SMOKE") else {
         return;
@@ -149,7 +149,10 @@ fn smoke<R: tauri::Runtime>(app: &tauri::App<R>) {
     let Some(window) = app.get_webview_window("main") else {
         return;
     };
-    let js = include_str!("smoke.js").replace("__OUT__", &out.replace('\\', "\\\\"));
+    let mode = std::env::var("RABBIT_STUDIO_SMOKE_MODE").unwrap_or_else(|_| "ipc".into());
+    let js = include_str!("smoke.js")
+        .replace("__OUT__", &out.replace('\\', "\\\\"))
+        .replace("__MODE__", &mode);
     std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_secs(4));
         let _ = window.eval(&js);

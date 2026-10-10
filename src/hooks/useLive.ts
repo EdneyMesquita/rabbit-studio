@@ -12,6 +12,7 @@ import { create } from "zustand";
 
 export const DEFAULT_INTERVAL = 5000;
 const MAX_BACKOFF = 60_000;
+const BEAT_EVERY = 4000;
 
 interface Entry {
   data: unknown;
@@ -116,7 +117,10 @@ async function run(key: string, force = false): Promise<void> {
       e.error = null;
       e.updatedAt = Date.now();
       e.failures = 0;
-      useLiveStore.setState({ lastBeat: e.updatedAt });
+      // The status bar beats at most every few seconds, however many keys
+      // answer: each beat is a repaint, and ten keys a cycle would make the
+      // window repaint nonstop.
+      if (e.updatedAt - useLiveStore.getState().lastBeat >= BEAT_EVERY) useLiveStore.setState({ lastBeat: e.updatedAt });
     } catch (err) {
       e.error = err instanceof Error ? err.message : String(err);
       e.failures++;

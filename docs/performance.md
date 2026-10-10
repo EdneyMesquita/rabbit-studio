@@ -26,7 +26,28 @@ Every view and dialog is a lazy chunk (largest: topology 28 kB, messages
 
 Most of it is the WebKitGTK baseline every Tauri app on Linux pays.
 
-## Live use: 3 clusters connected, global view + Explorer tree open, 69 s
+## Live use, release build (native window, WebKitGTK)
+
+`cargo` feature `smoke` + `RABBIT_STUDIO_SMOKE_MODE=load`: the window
+connects every saved cluster (4: two 4.2, one 3.13, one read-only 4.2) and
+opens the global view with the Explorer showing; CPU is then sampled per
+thread from `/proc` for 60 s of steady state (`threads.sh` in the session
+notes), memory as PSS.
+
+| | CPU (one core) | PSS, all processes |
+|---|---|---|
+| Idle, nothing connected | 0.03 % | 247 MB |
+| 4 clusters live, before the fix below | 8 % (5.6 % from the status bar's pulse) | 296 MB |
+| 4 clusters live, now | **2.6 %** | **234 MB** |
+
+The fix: the status bar's live pulse was a keyframe animation, and on
+WebKitGTK even that 6px ring repainted the window at 60 fps - more than
+all the polling it reported on. It is now a ring that shows and goes
+(two paints per beat, at most one beat per 4 s). Nothing else animates
+while data refreshes; the page's own work is 2 animation frames and ~27
+timers per 10 s.
+
+## Live use in the dev build: 3 clusters connected, global view + Explorer tree open, 69 s
 
 - Requests: 135 (1.95/s, ~14 kB/s): every list asks only for the columns
   it shows; hidden tabs, a hidden window and a paused status bar poll

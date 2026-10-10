@@ -32,7 +32,7 @@ interface UiState {
   setPaletteOpen: (open: boolean) => void;
 }
 
-export const DEFAULT_SIDEBAR_WIDTH = 280;
+export const DEFAULT_SIDEBAR_WIDTH = 300;
 export const DEFAULT_INSPECTOR_WIDTH = 380;
 
 export const useUiStore = create<UiState>()(
@@ -54,6 +54,14 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: "rabbit-studio-ui",
+      // v1: a width the startup fit had squeezed to the minimum goes back
+      // to the default.
+      version: 1,
+      migrate: (state, version) => {
+        const s = state as { sidebarWidth?: number };
+        if (version < 1 && (s.sidebarWidth ?? 0) <= 180) s.sidebarWidth = DEFAULT_SIDEBAR_WIDTH;
+        return s as never;
+      },
       // Only layout sizes are lasting preferences.
       partialize: (s) => ({ sidebarWidth: s.sidebarWidth, inspectorWidth: s.inspectorWidth }),
     },
