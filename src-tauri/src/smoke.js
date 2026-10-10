@@ -98,6 +98,15 @@
     key("n", { ctrlKey: true });
     await sleep(2000);
     await shot("newconn");
+    const body = [...document.querySelectorAll("[role=dialog] *")].find((e) => e.scrollHeight > e.clientHeight + 20 && getComputedStyle(e).overflowY !== "visible");
+    if (body) body.scrollTop = body.scrollHeight;
+    await sleep(600);
+    await shot("newconn-password");
+    [...document.querySelectorAll("[role=dialog] button")].find((b) => b.textContent.trim() === "OAuth 2")?.click();
+    await sleep(600);
+    if (body) body.scrollTop = body.scrollHeight;
+    await sleep(600);
+    await shot("newconn-oauth");
     key("Escape");
     await sleep(800);
     tree("orders.capped", { exact: false });

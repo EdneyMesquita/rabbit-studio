@@ -43,6 +43,7 @@ export default function PurgeQueueDialog({ context, onClose }: DialogProps) {
   const label = ready != null ? `Purge ${int(ready)} ${ready === 1 ? "message" : "messages"}` : "Purge";
   return (
     <Modal
+      danger
       title={`Purge ${name}?`}
       onClose={onClose}
       width="max-w-[460px]"

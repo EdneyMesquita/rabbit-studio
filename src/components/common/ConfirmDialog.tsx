@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/Modal";
 import { useConfirmStore } from "../../store/confirmStore";
@@ -22,6 +21,7 @@ function Question() {
   return (
     <Modal
       title={pending.title}
+      danger={pending.danger}
       onClose={() => answer(false)}
       footer={
         <>
@@ -41,10 +41,7 @@ function Question() {
       }
     >
       <div className="flex flex-col gap-3">
-        <div className="flex items-start gap-3">
-          {pending.danger && <TriangleAlert className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />}
-          <p className="m-0 whitespace-pre-line text-fg-2">{pending.message}</p>
-        </div>
+        <p className="m-0 whitespace-pre-line text-fg-2">{pending.message}</p>
         {guarded && (
           <form
             className="flex flex-col gap-1.5 rounded-md bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-2.5"

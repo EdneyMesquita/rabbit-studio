@@ -50,7 +50,7 @@ const nodes: Column<NodeRow>[] = [
   {
     id: "mem",
     header: "memory",
-    width: 210,
+    width: 250,
     sortValue: (n) => (n.mem_limit ? (n.mem_used ?? 0) / n.mem_limit : 0),
     cell: (n) =>
       n.running === false ? (

@@ -64,6 +64,7 @@ export default function DeleteQueueDialog({ context, onClose }: DialogProps) {
   const consumers = q?.consumers ?? 0;
   return (
     <Modal
+      danger
       title={`Delete ${name}?`}
       onClose={onClose}
       width="max-w-[460px]"

@@ -57,6 +57,7 @@ export default function DeleteExchangeDialog({ context, onClose }: DialogProps) 
 
   return (
     <Modal
+      danger
       title="Delete exchange"
       onClose={onClose}
       footer={
