@@ -7,13 +7,14 @@ import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { invalidate } from "@/hooks/useLive";
 import { errorText, rabbit } from "@/lib/rabbit/client";
 import { openOn } from "@/lib/rabbit/nav";
 import { paths } from "@/lib/rabbit/paths";
 import type { Parameter } from "@/types/rabbit";
 import type { DialogProps } from "../../types";
-import { uriList } from "../adminLogic";
+import { splitList, uriList } from "../adminLogic";
 import { Field, FieldRow, useVhostNames } from "../shared";
 
 type Kind = "queue" | "exchange";
@@ -36,7 +37,7 @@ interface End {
 
 function endOf(v: Record<string, unknown>, side: "src" | "dest"): End {
   return {
-    uri: uriList(v[`${side}-uri`]).join(", ") || "amqp://",
+    uri: uriList(v[`${side}-uri`]).join("\n") || "amqp://",
     kind: v[`${side}-exchange`] ? "exchange" : "queue",
     queue: String(v[`${side}-queue`] ?? ""),
     exchange: String(v[`${side}-exchange`] ?? ""),
@@ -49,8 +50,8 @@ function EndFields({ id, title, end, onChange, source }: { id: string; title: st
   return (
     <fieldset className="flex flex-col gap-2 rounded-md border border-line p-3">
       <legend className="px-1 text-xs font-semibold tracking-[0.02em] text-fg-2 uppercase">{title}</legend>
-      <Field label="URI" htmlFor={`${id}-uri`} help={'"amqp://" alone is this broker, on the shovel\'s own vhost.'}>
-        <Input id={`${id}-uri`} spellCheck={false} className="font-mono text-[12px]" value={end.uri} onChange={(e) => set({ uri: e.target.value })} />
+      <Field label="URI" htmlFor={`${id}-uri`} help={'"amqp://" alone is this broker, on the shovel\'s own vhost. One URI per line to list fallbacks.'}>
+        <Textarea id={`${id}-uri`} rows={1} spellCheck={false} className="min-h-8 font-mono text-[12px]" value={end.uri} onChange={(e) => set({ uri: e.target.value })} />
       </Field>
       <SegmentedControl<Kind> aria-label={`${title} kind`} value={end.kind} onChange={(kind) => set({ kind })} options={KINDS} />
       {end.kind === "queue" ? (
@@ -96,7 +97,7 @@ export default function CreateShovelDialog({ context, onClose }: DialogProps) {
     const n = name.trim();
     if (!n) return setError("Give the shovel a name.");
     if (!vhost) return setError("Choose a virtual host.");
-    if (!src.uri.trim() || !dest.uri.trim()) return setError("Both ends need a URI.");
+    if (!splitList(src.uri).length || !splitList(dest.uri).length) return setError("Both ends need a URI.");
     if (src.kind === "queue" ? !src.queue.trim() : !src.exchange.trim()) return setError(`Name the source ${src.kind}.`);
     if (dest.kind === "exchange" && !dest.exchange.trim()) return setError("Name the destination exchange, or switch it to a queue.");
     if (!/^\d+$/.test(prefetch.trim())) return setError("Prefetch is a whole number.");
@@ -108,8 +109,10 @@ export default function CreateShovelDialog({ context, onClose }: DialogProps) {
     for (const k of ["src-queue", "src-exchange", "src-exchange-key", "dest-queue", "dest-exchange", "dest-exchange-key"]) delete body[k];
     body["src-protocol"] ??= "amqp091";
     body["dest-protocol"] ??= "amqp091";
-    body["src-uri"] = src.uri.trim();
-    body["dest-uri"] = dest.uri.trim();
+    const srcUris = splitList(src.uri);
+    const destUris = splitList(dest.uri);
+    body["src-uri"] = srcUris.length === 1 ? srcUris[0] : srcUris;
+    body["dest-uri"] = destUris.length === 1 ? destUris[0] : destUris;
     if (src.kind === "queue") body["src-queue"] = src.queue.trim();
     else {
       body["src-exchange"] = src.exchange.trim();

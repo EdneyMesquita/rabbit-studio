@@ -38,6 +38,7 @@ async function load(cid: string): Promise<Loaded> {
   return { flags, deprecated };
 }
 
+const flagKey = (x: { name: string }) => x.name;
 const flagTone = (state: string): Tone => (state === "enabled" ? "ok" : state === "disabled" ? "idle" : "warn");
 const canEnable = (f: FeatureFlag) => f.state === "disabled" && f.stability === "stable";
 
@@ -147,7 +148,7 @@ export default function FlagsSection({ cid, shown }: SectionProps) {
           aria-label="Feature flags"
           rows={flags}
           columns={flagColumns}
-          rowKey={(f) => f.name}
+          rowKey={flagKey}
           selected={selected}
           onSelectionChange={(keys) => setSelected(keys)}
           defaultSort={{ column: "name", desc: false }}
@@ -158,7 +159,7 @@ export default function FlagsSection({ cid, shown }: SectionProps) {
           aria-label="Deprecated features"
           rows={deprecated}
           columns={deprecatedColumns}
-          rowKey={(d) => d.name}
+          rowKey={flagKey}
           defaultSort={{ column: "name", desc: false }}
           empty={filter ? "No deprecated features match." : "This broker lists no deprecated features."}
         />
