@@ -4,14 +4,14 @@ import { DropdownMenuItem, DropdownMenuLabel } from "@/components/ui/dropdown-me
 import { connectionColor } from "../../lib/connectionColor";
 import { useConnectionsStore } from "../../store/connectionsStore";
 import { useSessionsStore } from "../../store/sessionsStore";
-import { useUiStore } from "../../store/uiStore";
+import { openOn } from "../../lib/rabbit/nav";
 import { lastTabOf } from "./lastTabs";
 
-/** Brings a connection forward: its last tab, or its tree when none is open. */
-function jumpTo(connectionId: string) {
+/** Brings a connection forward: its last tab, or its overview when none is open. */
+export function jumpTo(connectionId: string) {
   const tabId = lastTabOf(connectionId);
   if (tabId) useSessionsStore.getState().activateTab(tabId);
-  else useUiStore.getState().setSidePanel("explorer");
+  else openOn(connectionId, { kind: "overview" });
 }
 
 /**

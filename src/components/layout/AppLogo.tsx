@@ -6,44 +6,47 @@ interface AppLogoProps {
 }
 
 /**
- * The app icon (src-tauri/icons/icon-source.svg), inline so it scales
- * crisply at any size. Gradient ids are per instance: two logos on screen
- * (toolbar and welcome) mustn't share them.
+ * The app mark (icons/icon-source.svg): the family's dark rounded square
+ * with Rabbit Studio's rabbit head, inline so it scales crisply at any
+ * size. Gradient ids are per instance: two logos on screen (toolbar and
+ * welcome) mustn't share them.
  */
 export function AppLogo({ className }: AppLogoProps) {
   // useId's punctuation doesn't survive url(#...) everywhere
   const id = `logo${useId().replace(/[^\w-]/g, "")}`;
   const bg = `${id}-bg`;
   const body = `${id}-body`;
-  const card = `${id}-card`;
   return (
     <svg viewBox="0 0 1024 1024" aria-hidden className={cn("shrink-0", className)}>
       <defs>
         <linearGradient id={bg} x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#232838" />
-          <stop offset="1" stopColor="#0b0d12" />
+          <stop offset="0" stopColor="#242837" />
+          <stop offset="1" stopColor="#0d0f14" />
         </linearGradient>
-        <linearGradient id={body} x1="512" y1="262" x2="512" y2="762" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#6E9BFF" />
-          <stop offset="1" stopColor="#2A5DC9" />
+        <linearGradient id={body} x1="512" y1="210" x2="512" y2="800" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#FFC28F" />
+          <stop offset="1" stopColor="#E8590C" />
         </linearGradient>
-        <clipPath id={card}>
-          <rect x="212" y="262" width="600" height="500" rx="76" />
-        </clipPath>
       </defs>
       <rect width="1024" height="1024" rx="200" fill={`url(#${bg})`} />
-      <g clipPath={`url(#${card})`}>
-        <rect x="212" y="262" width="600" height="500" fill={`url(#${body})`} />
-        <rect x="212" y="262" width="600" height="150" fill="#B7CDFF" />
-        <path
-          d="M 212 412 H 812 M 212 528 H 812 M 212 644 H 812 M 418 412 V 762"
-          stroke="#163A88"
-          strokeWidth="20"
-          opacity=".55"
-        />
+      <g fill={`url(#${body})`}>
+        <rect x="322" y="196" width="140" height="360" rx="70" transform="rotate(-9 392 520)" />
+        <rect x="562" y="196" width="140" height="360" rx="70" transform="rotate(9 632 520)" />
+        <ellipse cx="512" cy="600" rx="262" ry="212" />
       </g>
-      <circle cx="314" cy="337" r="34" fill="#163A88" opacity=".8" />
-      <rect x="386" y="320" width="330" height="34" rx="17" fill="#163A88" opacity=".45" />
+      <rect x="360" y="246" width="64" height="236" rx="32" fill="#FFE2C8" opacity=".75" transform="rotate(-9 392 520)" />
+      <rect x="600" y="246" width="64" height="236" rx="32" fill="#FFE2C8" opacity=".75" transform="rotate(9 632 520)" />
+      <circle cx="420" cy="584" r="32" fill="#8F3506" opacity=".8" />
+      <circle cx="604" cy="584" r="32" fill="#8F3506" opacity=".8" />
+      <path d="M 482 650 Q 512 632 542 650 Q 528 682 512 684 Q 496 682 482 650 Z" fill="#8F3506" opacity=".7" />
+      <path
+        d="M 512 684 V 716 M 512 716 Q 486 744 456 728 M 512 716 Q 538 744 568 728"
+        fill="none"
+        stroke="#8F3506"
+        strokeWidth="16"
+        strokeLinecap="round"
+        opacity=".5"
+      />
     </svg>
   );
 }

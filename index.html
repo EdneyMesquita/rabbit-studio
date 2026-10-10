@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Postgres Studio</title>
+    <title>Rabbit Studio</title>
     <style>
       /* Until the app's stylesheet loads: the editor tone of the saved theme. */
       html { background: #1e1f22; }
@@ -24,7 +24,7 @@
     <script>
       // Same key as src/lib/themes.ts, so the splash matches the app.
       try {
-        if (localStorage.getItem("postgres-studio-theme") === "light") document.documentElement.dataset.theme = "light";
+        if (localStorage.getItem("rabbit-studio-theme") === "light") document.documentElement.dataset.theme = "light";
       } catch {}
     </script>
   </head>
@@ -32,22 +32,25 @@
   <body>
     <!-- React replaces the splash when it mounts. -->
     <div id="root">
-      <div id="splash" role="status" aria-label="Loading Postgres Studio">
+      <div id="splash" role="status" aria-label="Loading Rabbit Studio">
         <div>
           <svg viewBox="0 0 1024 1024" aria-hidden="true">
             <defs>
-              <linearGradient id="sb" x1="512" y1="262" x2="512" y2="762" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stop-color="#6E9BFF" />
-                <stop offset="1" stop-color="#2A5DC9" />
+              <linearGradient id="sb" x1="512" y1="210" x2="512" y2="800" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#FFC28F" />
+                <stop offset="1" stop-color="#E8590C" />
               </linearGradient>
-              <clipPath id="sc"><rect x="212" y="262" width="600" height="500" rx="76" /></clipPath>
             </defs>
             <rect width="1024" height="1024" rx="200" fill="#191c25" />
-            <g clip-path="url(#sc)">
-              <rect x="212" y="262" width="600" height="500" fill="url(#sb)" />
-              <rect x="212" y="262" width="600" height="150" fill="#B7CDFF" />
-              <path d="M 212 412 H 812 M 212 528 H 812 M 212 644 H 812 M 418 412 V 762" stroke="#163A88" stroke-width="20" opacity=".55" />
+            <g fill="url(#sb)">
+              <rect x="322" y="196" width="140" height="360" rx="70" transform="rotate(-9 392 520)" />
+              <rect x="562" y="196" width="140" height="360" rx="70" transform="rotate(9 632 520)" />
+              <ellipse cx="512" cy="600" rx="262" ry="212" />
             </g>
+            <rect x="360" y="246" width="64" height="236" rx="32" fill="#FFE2C8" opacity=".75" transform="rotate(-9 392 520)" />
+            <rect x="600" y="246" width="64" height="236" rx="32" fill="#FFE2C8" opacity=".75" transform="rotate(9 632 520)" />
+            <circle cx="420" cy="584" r="32" fill="#8F3506" opacity=".8" />
+            <circle cx="604" cy="584" r="32" fill="#8F3506" opacity=".8" />
           </svg>
           <i></i>
         </div>

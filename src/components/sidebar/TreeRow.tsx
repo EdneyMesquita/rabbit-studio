@@ -19,6 +19,12 @@ interface TreeRowProps extends Omit<ComponentProps<"div">, "children"> {
   selected?: boolean;
   /** Runs on click, and on Enter or Space while the row has focus. */
   onActivate?: () => void;
+  /**
+   * The chevron's own click, when the row does something else (a folder
+   * whose label opens a list): toggles without activating. Also ArrowRight
+   * / ArrowLeft.
+   */
+  onToggle?: () => void;
 }
 
 /** One 24px explorer row: chevron, icon, label and trailing slot. */
@@ -31,6 +37,7 @@ export function TreeRow({
   trailing,
   selected = false,
   onActivate,
+  onToggle,
   className,
   style,
   onClick,
@@ -45,7 +52,14 @@ export function TreeRow({
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     onKeyDown?.(e);
     // only the row itself: keys typed in a button or field inside it are theirs
-    if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+    if (e.target !== e.currentTarget) return;
+    const toggle = onToggle ?? onActivate;
+    if (expanded !== undefined && toggle && ((e.key === "ArrowRight" && !expanded) || (e.key === "ArrowLeft" && expanded))) {
+      e.preventDefault();
+      toggle();
+      return;
+    }
+    if (e.key !== "Enter" && e.key !== " ") return;
     e.preventDefault();
     onActivate?.();
   }
@@ -57,7 +71,7 @@ export function TreeRow({
       aria-selected={selected}
       tabIndex={0}
       className={cn(
-        "group relative flex h-6 select-none items-center gap-1.5 whitespace-nowrap pr-2 text-base text-fg hover:bg-row-hover",
+        "group relative flex h-6 select-none items-center gap-1.5 whitespace-nowrap pr-2 text-base text-fg outline-offset-[-2px] hover:bg-row-hover",
         selected && "bg-sel hover:bg-sel",
         className,
       )}
@@ -66,7 +80,18 @@ export function TreeRow({
       onKeyDown={handleKeyDown}
       {...rest}
     >
-      <span className="grid size-4 shrink-0 place-items-center text-fg-3" aria-hidden>
+      <span
+        className={cn("grid size-4 shrink-0 place-items-center text-fg-3", onToggle && "rounded-xs hover:bg-hover hover:text-fg")}
+        aria-hidden
+        onClick={
+          onToggle && expanded !== undefined
+            ? (e) => {
+                e.stopPropagation();
+                onToggle();
+              }
+            : undefined
+        }
+      >
         {expanded !== undefined && (
           <ChevronRight
             className={cn(

@@ -1,50 +1,37 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { SslMode } from "@/types/connection";
-import { type ConnectionSectionProps } from "./connectionFormTypes";
+import { Info } from "lucide-react";
+import { type ConnectionSectionProps, managementTls } from "./connectionFormTypes";
 import { Field } from "./Field";
 import { FilePicker } from "./FilePicker";
-
-const MODES: { value: SslMode; label: string; help: string }[] = [
-  { value: "disable", label: "disable", help: "Never TLS. Only for servers on this machine or a trusted network." },
-  { value: "prefer", label: "prefer", help: "TLS when the server offers it, without checking its certificate (libpq's default)." },
-  { value: "require", label: "require", help: "Always TLS, without checking the certificate: encrypted, but not protected from impersonation." },
-  { value: "verify-ca", label: "verify-ca", help: "Always TLS, with a certificate signed by a trusted authority, for any host name." },
-  { value: "verify-full", label: "verify-full", help: "Always TLS, with a trusted certificate issued for this host. The safe choice for remote servers." },
-];
+import { SwitchField } from "./SwitchField";
 
 export function TlsSection({ input, update }: ConnectionSectionProps) {
   const tls = input.tls;
-  const mode = MODES.find((m) => m.value === tls.sslMode) ?? MODES[1];
-  const verifies = tls.sslMode === "verify-ca" || tls.sslMode === "verify-full";
+  const on = managementTls(input);
   return (
     <>
-      <Field label="SSL mode" htmlFor="tls-mode" help={mode.help}>
-        <Select value={tls.sslMode} onValueChange={(v) => update("tls", { ...tls, sslMode: v as SslMode })}>
-          <SelectTrigger id="tls-mode" className="w-full font-data">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {MODES.map((m) => (
-              <SelectItem key={m.value} value={m.value} className="font-data">
-                {m.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Field>
-      <Field
-        label="Certificate authority"
-        htmlFor="tls-ca"
-        help={verifies ? "PEM file with the CA certificates to trust (sslrootcert); the system's when empty." : "Used with verify-ca and verify-full."}
-      >
+      {!on && (
+        <p className="flex items-start gap-2 rounded-md bg-fg/6 px-3 py-2 text-sm text-fg-2">
+          <Info className="mt-px size-3.5 shrink-0" />
+          {input.source.kind === "uri"
+            ? "The URL is http://, so the management API is reached without TLS. These apply to an https:// URL and to amqps."
+            : "https is off in General. These apply once it's on, and to amqps."}
+        </p>
+      )}
+      <Field label="Certificate authority" htmlFor="tls-ca" help="PEM file with the CA certificates to trust; the system's when empty.">
         <FilePicker id="tls-ca" value={tls.caFile} onChange={(caFile) => update("tls", { ...tls, caFile })} placeholder="System trust store" />
       </Field>
-      <Field label="Client certificate" htmlFor="tls-cert" help="PEM certificate for certificate authentication (sslcert).">
+      <Field label="Client certificate" htmlFor="tls-cert" help="PEM certificate, for brokers that ask for one (mutual TLS).">
         <FilePicker id="tls-cert" value={tls.certFile} onChange={(certFile) => update("tls", { ...tls, certFile })} placeholder="None" />
       </Field>
-      <Field label="Client key" htmlFor="tls-key" help="Its PEM private key, unencrypted (sslkey).">
+      <Field label="Client key" htmlFor="tls-key" help="Its PEM private key, unencrypted.">
         <FilePicker id="tls-key" value={tls.keyFile} onChange={(keyFile) => update("tls", { ...tls, keyFile })} placeholder="None" />
       </Field>
+      <SwitchField
+        label="Allow invalid certificates"
+        description="Skips checking the broker's certificate and host name. Only for self-signed brokers on a private network: it leaves the connection open to impersonation."
+        checked={tls.allowInvalidCertificates}
+        onCheckedChange={(allowInvalidCertificates) => update("tls", { ...tls, allowInvalidCertificates })}
+      />
     </>
   );
 }

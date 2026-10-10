@@ -2,15 +2,15 @@ import { create } from "zustand";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { lockCursor, unlockCursor } from "../../lib/dragCursor";
 import { useEditorLayoutStore } from "../../store/editorLayoutStore";
-import { useTabGroupsStore } from "../../store/tabGroupsStore";
+import { useSessionsStore } from "../../store/sessionsStore";
 
 /** Where a dragged tab would land. */
 export type TabDropTarget =
   | { kind: "pane"; pane: number }
   /** The right half of a single view: splits it. */
   | { kind: "side" }
-  /** A group's header; a connection group takes the tab out of its manual group. */
-  | { kind: "group"; groupId: string; manual: boolean };
+  /** Another tab in the strip: the dragged one takes its place. */
+  | { kind: "tab"; tabId: string };
 
 interface TabDragState {
   tabId: string | null;
@@ -34,27 +34,30 @@ const DRAG_THRESHOLD = 5;
 
 /**
  * The drop target under the pointer. Panes carry `data-drop-pane`, the
- * split zone `data-drop-side`, group headers `data-drop-group` (and
- * `data-drop-manual` for the user's groups).
+ * split zone `data-drop-side`, tabs in the strip `data-drop-tab`.
  */
-function targetAt(x: number, y: number): TabDropTarget | null {
-  const el = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-drop-pane], [data-drop-side], [data-drop-group]");
+function targetAt(x: number, y: number, dragged: string): TabDropTarget | null {
+  const el = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-drop-pane], [data-drop-side], [data-drop-tab]");
   if (!el) return null;
   if (el.dataset.dropPane !== undefined) return { kind: "pane", pane: Number(el.dataset.dropPane) };
   if (el.dataset.dropSide !== undefined) return { kind: "side" };
-  return { kind: "group", groupId: el.dataset.dropGroup!, manual: el.dataset.dropManual !== undefined };
+  return el.dataset.dropTab === dragged ? null : { kind: "tab", tabId: el.dataset.dropTab! };
 }
 
 function drop(tabId: string, target: TabDropTarget) {
   const layout = useEditorLayoutStore.getState();
   if (target.kind === "pane") layout.openInPane(tabId, target.pane);
   else if (target.kind === "side") layout.openToSide(tabId);
-  else useTabGroupsStore.getState().moveToGroup(tabId, target.manual ? target.groupId : null);
+  else {
+    const sessions = useSessionsStore.getState();
+    const index = sessions.tabs.findIndex((t) => t.id === target.tabId);
+    if (index >= 0) sessions.moveTab(tabId, index);
+  }
 }
 
 /**
  * Starts tracking a press on a tab; past a few pixels it becomes a drag
- * onto a pane, the split zone or a group header. Pointer events rather than
+ * onto a pane, the split zone or another tab (to reorder). Pointer events rather than
  * HTML5 drag and drop, as in the sidebar: Tauri's file-drop handling
  * swallows HTML5 drags in the Windows webview.
  */
@@ -70,7 +73,7 @@ export function startTabDrag(e: ReactPointerEvent<HTMLElement>, tabId: string, l
       dragging = true;
       lockCursor("grabbing");
     }
-    useTabDragStore.setState({ tabId, label, x: ev.clientX, y: ev.clientY, target: targetAt(ev.clientX, ev.clientY) });
+    useTabDragStore.setState({ tabId, label, x: ev.clientX, y: ev.clientY, target: targetAt(ev.clientX, ev.clientY, tabId) });
   }
 
   function finish(ev: PointerEvent, cancelled: boolean) {
@@ -80,7 +83,7 @@ export function startTabDrag(e: ReactPointerEvent<HTMLElement>, tabId: string, l
     window.removeEventListener("keydown", onKey, true);
     if (!dragging) return;
     unlockCursor();
-    const target = cancelled ? null : targetAt(ev.clientX, ev.clientY);
+    const target = cancelled ? null : targetAt(ev.clientX, ev.clientY, tabId);
     useTabDragStore.setState({ tabId: null, target: null });
     // A drop back on the tab ends with a click on it, which a drag isn't.
     // That click comes right after pointerup or not at all, so the guard

@@ -2,8 +2,8 @@ import { useConnectionsStore } from "../store/connectionsStore";
 
 /**
  * A connection's identity colors, in picker order (DESIGN.md: connection
- * palette). They mark where a query runs - chip, tab underline, toolbar
- * edge, status bar - and nothing else.
+ * palette). They mark which cluster a view speaks for - chip, tab
+ * underline, toolbar edge, status bar - and nothing else.
  */
 export const CONNECTION_COLORS = [
   "#4FA25A",
@@ -35,8 +35,14 @@ export function connectionInitials(name: string): string {
   return (words[0][0] + words[1][0]).toUpperCase();
 }
 
-/** Live color for a connection id, following edits to the profile. */
-export function useConnectionColor(id: string): string {
-  const color = useConnectionsStore((s) => s.profiles.find((p) => p.id === id)?.color);
-  return connectionColor(id, color);
+/** The global (every cluster) view's neutral mark: slate, never a connection's hue. */
+export const WORKSPACE_COLOR = "#6E7380";
+
+/**
+ * Live color for a connection id, following edits to the profile; the
+ * workspace's for null (the global tab).
+ */
+export function useConnectionColor(id: string | null): string {
+  const color = useConnectionsStore((s) => (id ? s.profiles.find((p) => p.id === id)?.color : null));
+  return id ? connectionColor(id, color) : WORKSPACE_COLOR;
 }

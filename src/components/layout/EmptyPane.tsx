@@ -2,11 +2,10 @@ import type { CSSProperties } from "react";
 import { ConnectionChip } from "@/components/ui/ConnectionChip";
 import { useConnectionColor } from "@/lib/connectionColor";
 import { useEditorLayoutStore } from "../../store/editorLayoutStore";
-import { useScriptsStore } from "../../store/scriptsStore";
 import { useSessionsStore } from "../../store/sessionsStore";
 import type { Tab } from "../../store/sessionsStore";
 import { LayoutIcon } from "../tabs/LayoutPicker";
-import { tabIcon, tabName } from "../tabs/tabName";
+import { tabIcon, tabName, tabWhere } from "../tabs/tabName";
 
 /** How many open tabs an empty pane offers to show. */
 const SUGGESTED = 5;
@@ -46,20 +45,18 @@ export function EmptyPane({ pane, focused, style }: { pane: number; focused: boo
 }
 
 function SuggestedTab({ tab, onOpen }: { tab: Tab; onOpen: () => void }) {
-  const color = useConnectionColor(tab.connection.id);
+  const color = useConnectionColor(tab.connection?.id ?? null);
   const Icon = tabIcon(tab);
-  // a console saved to a file goes by the file's name, as on its tab
-  const fileName = useScriptsStore((s) => (tab.kind === "console" ? s.files[tab.id]?.name : undefined));
   return (
     <button
       type="button"
       onClick={onOpen}
       className="flex h-7 min-w-0 items-center gap-[7px] rounded-md px-2 text-fg hover:bg-row-hover"
     >
-      <ConnectionChip name={tab.connection.name} color={color} size="dot" />
+      <ConnectionChip name={tabWhere(tab)} color={color} size="dot" />
       <Icon className="size-3.5 shrink-0 text-fg-2" aria-hidden />
-      <span className="min-w-0 truncate">{fileName ?? tabName(tab)}</span>
-      <span className="ml-auto shrink-0 pl-2 text-xs text-fg-3">{tab.connection.name}</span>
+      <span className="min-w-0 truncate">{tabName(tab)}</span>
+      <span className="ml-auto shrink-0 pl-2 text-xs text-fg-3">{tabWhere(tab)}</span>
     </button>
   );
 }

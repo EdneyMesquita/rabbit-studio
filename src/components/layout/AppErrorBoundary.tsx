@@ -45,7 +45,7 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, AppErro
             Something went wrong
           </h1>
           <p className="m-0 text-fg-2">
-            Postgres Studio hit an error it couldn't recover from, and wrote it to the log. Try again,
+            Rabbit Studio hit an error it couldn't recover from, and wrote it to the log. Try again,
             or reload the window if that doesn't help.
           </p>
           <pre className="m-0 max-h-48 overflow-auto rounded-md bg-danger/10 px-3 py-2 font-data break-words whitespace-pre-wrap text-danger select-text">

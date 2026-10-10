@@ -9,14 +9,12 @@ export function SearchButton() {
   return (
     <Button
       variant="secondary"
-      aria-label="Search tables, scripts and actions"
+      aria-label="Search queues, exchanges, connections and actions"
       className="w-[min(320px,28vw)] cursor-text justify-start gap-2 border-line bg-editor pr-1.5 pl-2.5 font-normal text-fg-3 hover:border-field-line hover:bg-editor max-[640px]:w-9 max-[640px]:justify-center max-[640px]:p-0"
       onClick={() => setPaletteOpen(true)}
     >
       <Search className="size-3.5" />
-      <span className="flex-1 truncate text-left max-[640px]:hidden">
-        Search tables, scripts, actions
-      </span>
+      <span className="flex-1 truncate text-left max-[640px]:hidden">Search queues, exchanges, actions</span>
       <Kbd className="max-[640px]:hidden">Ctrl K</Kbd>
     </Button>
   );

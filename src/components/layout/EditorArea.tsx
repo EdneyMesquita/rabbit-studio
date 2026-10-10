@@ -1,21 +1,21 @@
+import { memo, Suspense } from "react";
 import type { CSSProperties } from "react";
-import { TableTabView } from "../table/TableTabView";
-import { DiagramTabView } from "../diagram/DiagramTabView";
-import { ActivityTabView } from "../activity/ActivityTabView";
-import { ScriptConsole } from "../console/ScriptConsole";
-import { CollectionTabs } from "../tabs/CollectionTabs";
+import { Loading } from "@/components/data/parts";
+import { VIEWS } from "../views/registry";
+import { TabStrip } from "../tabs/TabStrip";
 import { TabDragGhost } from "../tabs/TabDragGhost";
 import { useTabDragStore } from "../tabs/useTabDrag";
 import { SPLIT_LAYOUTS } from "../../lib/editorLayout";
 import { useEditorLayoutStore } from "../../store/editorLayoutStore";
 import { selectActiveTab, useSessionsStore } from "../../store/sessionsStore";
+import type { Tab } from "../../store/sessionsStore";
 import { cn } from "@/lib/utils";
 import { EditorPaneHeader } from "./EditorPaneHeader";
 import { EmptyPane } from "./EmptyPane";
-import { PaneContext } from "./paneContext";
 import { ShortcutWatermark } from "./ShortcutWatermark";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { useConnectedCount } from "./useActiveConnection";
+import { ViewErrorBoundary } from "./ViewErrorBoundary";
 
 /** The pane header's height, in px. */
 const PANE_HEADER = 30;
@@ -25,7 +25,8 @@ const PANE_HEADER = 30;
  * Everything sits in one CSS grid - a header row and a body row per pane
  * row - and each tab's view is placed in its pane's body or kept hidden, so
  * changing layout or moving a tab to another pane never remounts it: its
- * scroll position and expanded nodes survive.
+ * scroll position and selection survive. Hidden tabs get `shown: false`
+ * and stop polling.
  */
 export function EditorArea() {
   const connected = useConnectedCount();
@@ -39,7 +40,7 @@ export function EditorArea() {
   const dragging = useTabDragStore((s) => s.tabId !== null);
   const dropTarget = useTabDragStore((s) => s.target);
 
-  if (connected === 0 && !activeTab) return <WelcomeScreen />;
+  if (connected === 0 && tabs.length === 0) return <WelcomeScreen />;
 
   const split = layout !== "single";
   // The panes on screen: all of them, or the maximized one alone.
@@ -47,7 +48,6 @@ export function EditorArea() {
   const info = SPLIT_LAYOUTS[maximized !== null ? "single" : layout];
   const cols = split ? info.cols : 1;
   const rows = split ? info.rows : 1;
-  const compact = split && maximized === null && (layout === "cols3" || layout === "grid");
 
   /** Grid placement of a pane's header and body, by its position on screen. */
   const cell = (slot: number, part: "header" | "body" | "both"): CSSProperties => {
@@ -61,7 +61,7 @@ export function EditorArea() {
 
   return (
     <>
-      {connected > 0 && <CollectionTabs />}
+      <TabStrip />
       <div
         className={cn("relative grid min-h-0 flex-1", split ? "gap-px bg-line" : "bg-editor")}
         style={{
@@ -86,35 +86,24 @@ export function EditorArea() {
           panes[p] === null ? <EmptyPane key={`empty-${p}`} pane={p} focused={p === focused} style={cell(slot, "body")} /> : null,
         )}
 
-        {/* Every table tab stays mounted; the ones no pane shows are
-            hidden in place, keeping their scroll and expanded nodes. */}
+        {/* Every tab stays mounted; the ones no pane shows are hidden in
+            place, keeping their scroll and selection. */}
         {tabs.map((tab) => {
           const slot = slotOf(tab.id);
           const visible = slot >= 0;
           const pane = split && visible ? shown[slot] : -1;
           const isFocused = split ? pane === focused : visible;
-          if (tab.kind === "console" && !visible) return null; // a console tab is only a console
           return (
             <div
               key={tab.id}
               style={visible ? cell(slot, "body") : undefined}
-              className={cn("min-h-0 min-w-0", visible ? "relative" : "invisible absolute inset-0")}
+              className={cn("flex min-h-0 min-w-0 flex-col", visible ? "relative" : "invisible absolute inset-0")}
               // A click or Tab key into a pane focuses it, so shortcuts and
               // the next tab clicked go there.
               onPointerDownCapture={split && visible ? () => focusPane(pane) : undefined}
               onFocusCapture={split && visible ? () => focusPane(pane) : undefined}
             >
-              <PaneContext.Provider value={{ inPane: split, compact }}>
-                {tab.kind === "table" ? (
-                  <TableTabView tab={tab} active={isFocused} shown={visible} />
-                ) : tab.kind === "diagram" ? (
-                  <DiagramTabView tab={tab} />
-                ) : tab.kind === "activity" ? (
-                  <ActivityTabView tab={tab} shown={visible} />
-                ) : (
-                  <ScriptConsole tab={tab} active={isFocused} />
-                )}
-              </PaneContext.Provider>
+              <TabView tab={tab} shown={visible} active={isFocused} />
             </div>
           );
         })}
@@ -153,3 +142,18 @@ export function EditorArea() {
     </>
   );
 }
+
+/**
+ * One tab's view, loaded on first show. Memoized: the editor re-renders on
+ * every tab or layout change, and a view should only when its own props do.
+ */
+const TabView = memo(function TabView({ tab, shown, active }: { tab: Tab; shown: boolean; active: boolean }) {
+  const View = VIEWS[tab.kind];
+  return (
+    <ViewErrorBoundary>
+      <Suspense fallback={<Loading />}>
+        <View tab={tab} shown={shown} active={active} />
+      </Suspense>
+    </ViewErrorBoundary>
+  );
+});

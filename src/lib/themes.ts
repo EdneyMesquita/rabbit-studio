@@ -11,7 +11,8 @@ export const THEMES: ThemeOption[] = [
   { id: "light", name: "Light" },
 ];
 
-const STORAGE_KEY = "postgres-studio-theme";
+/** Also read by the splash in index.html, so keep the two in step. */
+const STORAGE_KEY = "rabbit-studio-theme";
 const DEFAULT_THEME: ThemeId = "dark";
 
 /** The saved theme: "light", or dark for anything else. */
@@ -34,9 +35,4 @@ export function applyTheme(themeId: ThemeId) {
 
 export function isLightTheme(themeId: ThemeId): boolean {
   return themeId === "light";
-}
-
-/** The Monaco theme registered for an app theme (see lib/monaco.ts). */
-export function monacoTheme(themeId: ThemeId): string {
-  return themeId === "light" ? "postgres-studio-light" : "postgres-studio-dark";
 }

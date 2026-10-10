@@ -32,8 +32,8 @@ export function ConnectionsImportExportDialog({ onClose }: ConnectionsImportExpo
 
         <DialogBody className="flex flex-col gap-4">
           <p className="text-sm text-fg-2">
-            Exports Postgres Studio's own JSON. Import reads that, and pgAdmin 4&apos;s servers.json
-            (File &gt; Export servers in pgAdmin).
+            Moves connections between machines as Rabbit Studio&apos;s own JSON file, with every
+            option of each connection.
           </p>
 
           <section className="flex flex-col gap-3">
@@ -70,8 +70,8 @@ export function ConnectionsImportExportDialog({ onClose }: ConnectionsImportExpo
           <section className="flex flex-col gap-3 border-t border-line-soft pt-4">
             <SectionTitle>Import</SectionTitle>
             <p className="text-sm text-fg-2">
-              Import a Postgres Studio export, or pgAdmin 4&apos;s servers.json. pgAdmin
-              doesn&apos;t export passwords: add them by editing each connection.
+              Import a Rabbit Studio export. Passwords come along only if they were exported
+              with it; otherwise add them by editing each connection.
             </p>
             <Button className="self-start" onClick={t.chooseImportFile} disabled={t.busy}>
               <Upload />

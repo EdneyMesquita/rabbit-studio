@@ -30,7 +30,7 @@ export function ConnectionStatus({
     return <Loader2 className="size-3 animate-spin text-fg-3" aria-label="Connecting" />;
   }
   if (connected) {
-    const hint = serverVersion ? `Connected · PostgreSQL ${serverVersion}` : "Connected";
+    const hint = serverVersion ? `Connected · RabbitMQ ${serverVersion}` : "Connected";
     return (
       <span
         role="img"

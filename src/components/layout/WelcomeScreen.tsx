@@ -1,28 +1,30 @@
-import { FileCode, Loader2, Lock, Network, Plus, Search, SquareTerminal, Upload } from "lucide-react";
+import { LayoutGrid, Loader2, Lock, Network, Plus, Search, ShieldAlert, Upload } from "lucide-react";
 import { ConnectionChip } from "@/components/ui/ConnectionChip";
 import { Kbd } from "@/components/ui/kbd";
 import { version } from "../../../package.json";
 import { connectionColor } from "../../lib/connectionColor";
+import { openOn } from "../../lib/rabbit/nav";
 import { useConnectionsStore } from "../../store/connectionsStore";
 import { useUiStore } from "../../store/uiStore";
+import { ENVIRONMENTS } from "../../types/connection";
 import { AppLogo } from "./AppLogo";
 import { WelcomeAction } from "./WelcomeAction";
 
-/** Nothing connected and nothing open: how to start, and every saved server. */
+/** Nothing connected and nothing open: how to start, and every saved cluster. */
 export function WelcomeScreen() {
   const profiles = useConnectionsStore((s) => s.profiles);
   const profilesLoaded = useConnectionsStore((s) => s.profilesLoaded);
   const connecting = useConnectionsStore((s) => s.connecting);
   const connectErrors = useConnectionsStore((s) => s.connectErrors);
   const setConnectionDialog = useUiStore((s) => s.setConnectionDialog);
-  const setSidePanel = useUiStore((s) => s.setSidePanel);
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
   const setImportExportOpen = useUiStore((s) => s.setImportExportOpen);
+  const empty = profilesLoaded && profiles.length === 0;
 
   async function connect(id: string) {
     await useConnectionsStore.getState().connect(id);
-    // Its databases are in the Explorer, so show it.
-    if (useConnectionsStore.getState().sessions[id]) setSidePanel("explorer");
+    // Straight to where its health is.
+    if (useConnectionsStore.getState().sessions[id]) openOn(id, { kind: "overview" });
   }
 
   return (
@@ -31,9 +33,9 @@ export function WelcomeScreen() {
         <h1 className="col-span-full m-0 flex items-center gap-3.5 text-xl font-semibold tracking-[-0.01em]">
           <AppLogo className="size-10" />
           <span>
-            Postgres Studio
+            Rabbit Studio
             <small className="mt-0.5 block text-base font-normal tracking-normal text-fg-2">
-              Version {version} · everything stays on this machine
+              Version {version} · one console for every RabbitMQ cluster
             </small>
           </span>
         </h1>
@@ -41,35 +43,31 @@ export function WelcomeScreen() {
         <section>
           <h2 className="mb-2 text-sm font-semibold text-fg-2">Start</h2>
           <div className="flex flex-col">
-            <WelcomeAction
-              icon={<Plus />}
-              trailing={<Kbd>Ctrl N</Kbd>}
-              onClick={() => setConnectionDialog({ mode: "new" })}
-            >
-              New connection
+            <WelcomeAction icon={<Plus />} trailing={<Kbd>Ctrl N</Kbd>} onClick={() => setConnectionDialog({ mode: "new" })}>
+              {empty ? "Add your first connection" : "New connection"}
             </WelcomeAction>
             <WelcomeAction icon={<Upload />} onClick={() => setImportExportOpen(true)}>
-              Import connections (pgAdmin servers.json)…
+              Import connections…
             </WelcomeAction>
-            <WelcomeAction icon={<FileCode />} onClick={() => setSidePanel("scripts")}>
-              Open a saved script…
-            </WelcomeAction>
-            <WelcomeAction
-              icon={<Search />}
-              trailing={<Kbd>Ctrl K</Kbd>}
-              onClick={() => setPaletteOpen(true)}
-            >
-              Search everything
-            </WelcomeAction>
+            {!empty && (
+              <>
+                <WelcomeAction icon={<LayoutGrid />} onClick={() => openOn(null, { kind: "global" })}>
+                  All clusters
+                </WelcomeAction>
+                <WelcomeAction icon={<Search />} trailing={<Kbd>Ctrl K</Kbd>} onClick={() => setPaletteOpen(true)}>
+                  Search everything
+                </WelcomeAction>
+              </>
+            )}
           </div>
         </section>
 
         <section>
           <h2 className="mb-2 text-sm font-semibold text-fg-2">Connect</h2>
           <div className="flex flex-col">
-            {profilesLoaded && profiles.length === 0 && (
+            {empty && (
               <p className="py-2 text-sm text-fg-3">
-                No saved connections yet. Add one, or import them from another tool.
+                No saved connections yet. Add one with its management API URL (port 15672, or 15671 over TLS).
               </p>
             )}
             {profiles.map((p) => (
@@ -86,7 +84,10 @@ export function WelcomeScreen() {
                       {connectErrors[p.id]}
                     </span>
                   ) : (
-                    <span className="truncate font-data text-fg-3">{p.summary}</span>
+                    <span className="truncate text-xs text-fg-3">
+                      {ENVIRONMENTS.find((e) => e.id === p.environment)?.label} ·{" "}
+                      <span className="font-data">{p.summary}</span>
+                    </span>
                   )
                 }
               >
@@ -103,11 +104,11 @@ export function WelcomeScreen() {
           </span>
           <span>
             <Network />
-            Connect to several servers at once
+            Many clusters side by side
           </span>
           <span>
-            <SquareTerminal />
-            SQL console with transactions and EXPLAIN
+            <ShieldAlert />
+            Production asks before anything destructive
           </span>
         </div>
       </div>

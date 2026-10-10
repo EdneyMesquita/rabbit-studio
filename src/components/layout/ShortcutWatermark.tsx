@@ -4,7 +4,7 @@ import { Kbd } from "@/components/ui/kbd";
 
 const SHORTCUTS: { label: string; keys: ReactNode }[] = [
   {
-    label: "Open a table or script",
+    label: "Go to a queue, exchange or action",
     keys: (
       <>
         <Kbd>Ctrl</Kbd>
@@ -12,7 +12,7 @@ const SHORTCUTS: { label: string; keys: ReactNode }[] = [
       </>
     ),
   },
-  { label: "Open a console on a database", keys: "right-click it in the Explorer" },
+  { label: "Open a vhost's queues", keys: "click it in the Explorer" },
   {
     label: "New connection",
     keys: (

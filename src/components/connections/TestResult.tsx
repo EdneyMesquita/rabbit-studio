@@ -13,19 +13,23 @@ export function TestResult({ testing, result }: TestResultProps) {
     return (
       <span role="status" className="inline-flex items-center gap-[7px] text-sm text-fg-2">
         <RefreshCw className="size-3.5 animate-spin" />
-        Testing...
+        Connecting…
       </span>
     );
   }
   if (!result) return null;
   if (result.success) {
+    const facts = [
+      result.clusterName,
+      result.serverVersion && `RabbitMQ ${result.serverVersion}`,
+      result.amqpReachable === true ? "AMQP reachable" : null,
+    ].filter(Boolean);
     return (
-      <span role="status" className="inline-flex min-w-0 items-center gap-[7px] text-sm text-ok">
+      <span role="status" className="inline-flex min-w-0 items-center gap-[7px] text-sm text-ok" title={result.message}>
         <CircleCheck className="size-3.5 shrink-0" />
         Connected
-        {result.serverVersion && (
-          <span className="truncate text-fg-2">· PostgreSQL {result.serverVersion}</span>
-        )}
+        {facts.length > 0 && <span className="truncate text-fg-2">· {facts.join(" · ")}</span>}
+        {result.amqpReachable === false && <span className="shrink-0 text-warn">· AMQP port not answering</span>}
       </span>
     );
   }

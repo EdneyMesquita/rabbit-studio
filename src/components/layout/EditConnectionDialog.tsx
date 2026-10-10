@@ -6,11 +6,13 @@ import { ConnectionForm } from "../connections/ConnectionForm";
 
 interface EditConnectionDialogProps {
   id: string;
+  /** Opens a copy of it as a new connection instead. */
+  duplicate?: boolean;
   onClose: () => void;
 }
 
-/** Loads a saved connection, secrets included, then shows it in the form. */
-export function EditConnectionDialog({ id, onClose }: EditConnectionDialogProps) {
+/** Loads a saved connection, then shows it in the form, to edit or to copy. */
+export function EditConnectionDialog({ id, duplicate = false, onClose }: EditConnectionDialogProps) {
   const [profile, setProfile] = useState<ConnectionProfile | null>(null);
 
   useEffect(() => {
@@ -32,5 +34,9 @@ export function EditConnectionDialog({ id, onClose }: EditConnectionDialogProps)
   }, [id]);
 
   if (!profile) return null;
-  return <ConnectionForm editing={profile} onSaved={onClose} onCancel={onClose} />;
+  return duplicate ? (
+    <ConnectionForm copyOf={profile} onSaved={onClose} onCancel={onClose} />
+  ) : (
+    <ConnectionForm editing={profile} onSaved={onClose} onCancel={onClose} />
+  );
 }

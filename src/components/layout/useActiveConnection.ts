@@ -1,32 +1,35 @@
-import { connectionColor } from "../../lib/connectionColor";
+import { useConnectionColor } from "../../lib/connectionColor";
 import { useConnectionsStore } from "../../store/connectionsStore";
 import type { ActiveSession } from "../../store/connectionsStore";
 import { selectActiveTab, useSessionsStore } from "../../store/sessionsStore";
-import type { Tab } from "../../store/sessionsStore";
+import type { Tab, TabConnection } from "../../store/sessionsStore";
+import type { ConnectionProfileMeta } from "../../types/connection";
 
 export interface ActiveConnection {
   tab: Tab;
-  /** The connection's identity color. */
+  /** Null for the global (every cluster) tab. */
+  connection: TabConnection | null;
+  /** The connection's identity color; the workspace's slate for the global tab. */
   color: string;
   session: ActiveSession | undefined;
+  profile: ConnectionProfileMeta | undefined;
 }
 
 /**
- * The connection the active tab runs against - the one the toolbar, the
- * breadcrumb and the status bar speak for. Null without an active tab.
+ * The connection the active tab speaks for - the one the toolbar, the
+ * breadcrumb and the status bar name. Null without an active tab.
  */
 export function useActiveConnection(): ActiveConnection | null {
   const tab = useSessionsStore(selectActiveTab);
-  const connectionId = tab?.connection.id ?? "";
-  const color = useConnectionsStore(
-    (s) => s.profiles.find((p) => p.id === connectionId)?.color,
-  );
-  const session = useConnectionsStore((s) => s.sessions[connectionId]);
+  const connectionId = tab?.connection?.id ?? null;
+  const color = useConnectionColor(connectionId);
+  const session = useConnectionsStore((s) => (connectionId ? s.sessions[connectionId] : undefined));
+  const profile = useConnectionsStore((s) => (connectionId ? s.profiles.find((p) => p.id === connectionId) : undefined));
   if (!tab) return null;
-  return { tab, color: connectionColor(tab.connection.id, color), session };
+  return { tab, connection: tab.connection, color, session, profile };
 }
 
-/** How many servers are connected right now. */
+/** How many clusters are connected right now. */
 export function useConnectedCount(): number {
   return useConnectionsStore((s) => Object.keys(s.sessions).length);
 }

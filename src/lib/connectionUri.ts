@@ -1,4 +1,4 @@
-/** One fact read out of a connection string, shown as a chip under it. */
+/** One fact read out of a management URL, shown as a chip under it. */
 export interface UriFact {
   label: string;
   value?: string;
@@ -13,41 +13,52 @@ function decode(text: string): string {
   }
 }
 
+/** The management URL read for a quick visual check, or why it can't be. */
+export type ParsedManagementUrl = { ok: true; facts: UriFact[] } | { ok: false; error: string };
+
 /**
- * What a postgres:// URI or a libpq key=value string says, for a quick
- * visual check. Never shows the password. Returns [] for anything it can't
- * read - the backend is the one that validates.
+ * What a management API URL says - `https://user:pass@host:15671/prefix` -
+ * as chips: host, port (the scheme's default when none is given, as the
+ * backend reads it), TLS, the API path and the user. Never shows the
+ * password. Null for an empty field; the backend is the one that validates.
  */
-export function describeConnectionUri(uri: string): UriFact[] {
-  const text = uri.trim();
-  const match = /^(postgres(?:ql)?):\/\/([^/?#]*)(?:\/([^?#]*))?(?:\?([^#]*))?/.exec(text);
-  if (match) {
-    const [, , authority, path, query] = match;
-    const at = authority.lastIndexOf("@");
-    const userinfo = at >= 0 ? authority.slice(0, at) : "";
-    const hosts = (at >= 0 ? authority.slice(at + 1) : authority).split(",").filter(Boolean);
-    const params = new URLSearchParams(query ?? "");
-    const facts: UriFact[] = [];
-    if (hosts.length) facts.push({ label: hosts.length > 1 ? "hosts" : "host", value: hosts.map(decode).join(", ") });
-    const user = userinfo.split(":")[0] || params.get("user");
+export function parseManagementUrl(url: string): ParsedManagementUrl | null {
+  const text = url.trim();
+  if (!text) return null;
+  const match = /^(https?):\/\/([^/?#]*)([^?#]*)/i.exec(text);
+  if (!match) return { ok: false, error: "Use http(s)://host:port, the port of the management plugin (15672, or 15671 over TLS)." };
+  const [, scheme, authority, path] = match;
+  const at = authority.lastIndexOf("@");
+  const userinfo = at >= 0 ? authority.slice(0, at) : "";
+  const hostPort = at >= 0 ? authority.slice(at + 1) : authority;
+  const portMatch = /^(\[[^\]]*\]|[^:]*)(?::(\d*))?$/.exec(hostPort);
+  const host = portMatch?.[1] ?? "";
+  if (!host) return { ok: false, error: "The URL has no host." };
+  const tls = scheme.toLowerCase() === "https";
+  const port = portMatch?.[2] ? portMatch[2] : tls ? "443" : "80";
+  const prefix = path.replace(/\/+$/, "");
+  const facts: UriFact[] = [
+    { label: "host", value: decode(host) },
+    { label: "port", value: port, suffix: portMatch?.[2] ? undefined : "(the scheme's default)" },
+    { label: "TLS", value: tls ? "yes" : "no" },
+    { label: "API", value: `${prefix}/api` },
+  ];
+  if (userinfo) {
+    const [user, password] = userinfo.split(/:(.*)/s);
     if (user) facts.push({ label: "user", value: decode(user) });
-    const database = decode(path ?? "") || params.get("dbname");
-    if (database) facts.push({ label: "database", value: database });
-    const sslmode = params.get("sslmode");
-    if (sslmode) facts.push({ label: "sslmode", value: sslmode });
-    if (userinfo.includes(":") || params.has("password")) facts.push({ label: "password", suffix: "moves to the keychain" });
-    return facts;
+    if (password !== undefined) facts.push({ label: "password", suffix: "moves to the keychain" });
   }
-  // key=value form
-  const pairs = [...text.matchAll(/(\w+)\s*=\s*('(?:[^'\\]|\\.)*'|\S+)/g)].map(([, k, v]) => [k, v.replace(/^'|'$/g, "")]);
-  if (pairs.length === 0) return [];
-  const get = (key: string) => pairs.find(([k]) => k === key)?.[1];
-  const facts: UriFact[] = [];
-  const host = get("host") ?? get("hostaddr");
-  if (host) facts.push({ label: "host", value: get("port") ? `${host}:${get("port")}` : host });
-  if (get("user")) facts.push({ label: "user", value: get("user") });
-  if (get("dbname")) facts.push({ label: "database", value: get("dbname") });
-  if (get("sslmode")) facts.push({ label: "sslmode", value: get("sslmode") });
-  if (get("password")) facts.push({ label: "password", suffix: "moves to the keychain" });
-  return facts;
+  return { ok: true, facts };
+}
+
+/** The user name in a URL's `user:pass@`, decoded; null when it has none. */
+export function urlUser(url: string): string | null {
+  const match = /^https?:\/\/([^@/?#]*)@/i.exec(url.trim());
+  if (!match) return null;
+  return decode(match[1].split(":")[0]) || null;
+}
+
+/** Whether a host field holds a whole URL (pasted), which the URL field should take instead. */
+export function looksLikeUrl(text: string): boolean {
+  return /^https?:\/\//i.test(text.trim());
 }

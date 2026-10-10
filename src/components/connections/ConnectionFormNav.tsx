@@ -1,5 +1,5 @@
 import { useRef, type KeyboardEvent, type ReactNode } from "react";
-import { Network, Plug, Shield, SlidersHorizontal } from "lucide-react";
+import { Lock, Network, Plug, Radio, ShieldAlert, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ConnectionSection } from "./connectionFormTypes";
 
@@ -14,8 +14,10 @@ interface ConnectionFormNavProps {
 
 const SECTIONS: { id: ConnectionSection; label: string; icon: ReactNode }[] = [
   { id: "general", label: "General", icon: <Plug /> },
-  { id: "tls", label: "TLS", icon: <Shield /> },
+  { id: "tls", label: "TLS", icon: <Lock /> },
+  { id: "amqp", label: "AMQP", icon: <Radio /> },
   { id: "ssh", label: "SSH tunnel", icon: <Network /> },
+  { id: "safety", label: "Safety", icon: <ShieldAlert /> },
   { id: "advanced", label: "Advanced", icon: <SlidersHorizontal /> },
 ];
 

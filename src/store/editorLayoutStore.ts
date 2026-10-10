@@ -31,7 +31,7 @@ const sessions = () => useSessionsStore.getState();
 /**
  * The editor's panes. The sessions store keeps which tab is active; in a
  * split that's the focused pane's tab, so anything that activates a tab -
- * the sidebar, Ctrl+K, the Assistant - lands it in the focused pane.
+ * the Explorer, Ctrl+K, a link in a view - lands it in the focused pane.
  */
 export const useEditorLayoutStore = create<EditorLayoutState>((set, get) => {
   const layout = (): EditorLayout => {

@@ -1,19 +1,17 @@
-import { Activity, Database, Layers, SquareTerminal, Table, Workflow } from "lucide-react";
+import { Layers } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Tab } from "../../store/sessionsStore";
-
-interface BreadcrumbProps {
-  tab: Tab;
-}
+import { adminLabel, exchangeLabel, tabIcon } from "../tabs/tabName";
 
 interface CrumbProps {
   icon: ReactNode;
   children: ReactNode;
+  mono?: boolean;
   /** The current place, in text color. */
   last?: boolean;
 }
 
-function Crumb({ icon, children, last }: CrumbProps) {
+function Crumb({ icon, children, mono, last }: CrumbProps) {
   return (
     <>
       <span aria-hidden className="text-fg-3">
@@ -26,43 +24,45 @@ function Crumb({ icon, children, last }: CrumbProps) {
         aria-current={last ? "location" : undefined}
       >
         {icon}
-        <span className="truncate">{children}</span>
+        <span className={`truncate ${mono ? "font-data" : ""}`}>{children}</span>
       </span>
     </>
   );
 }
 
-/** Where the active tab runs: database / schema / table, or database / Console. */
-export function Breadcrumb({ tab }: BreadcrumbProps) {
+const KIND_CRUMB: Partial<Record<Tab["kind"], string>> = {
+  overview: "Overview",
+  topology: "Topology",
+  nodes: "Nodes",
+  connections: "Connections",
+  channels: "Channels",
+  queues: "Queues",
+  exchanges: "Exchanges",
+  streams: "Streams",
+};
+
+/** Where the active tab is, after its cluster: vhost / object, or the view's name. */
+export function Breadcrumb({ tab }: { tab: Tab }) {
+  if (tab.kind === "global") return null;
+  const Icon = tabIcon(tab);
+  const object = tab.kind === "queue" || tab.kind === "exchange";
+  const label = object
+    ? tab.kind === "exchange"
+      ? exchangeLabel(tab.name ?? "")
+      : (tab.name ?? "")
+    : tab.kind === "admin"
+      ? adminLabel(tab.section)
+      : KIND_CRUMB[tab.kind];
   return (
-    <nav
-      aria-label="Location"
-      className="flex min-w-0 items-center gap-0.5 whitespace-nowrap max-[960px]:hidden"
-    >
-      <Crumb icon={<Database />}>{tab.database}</Crumb>
-      {tab.kind === "table" ? (
-        <>
-          <Crumb icon={<Layers />}>{tab.schema}</Crumb>
-          <Crumb icon={<Table />} last>
-            {tab.table}
-          </Crumb>
-        </>
-      ) : tab.kind === "diagram" ? (
-        <>
-          <Crumb icon={<Layers />}>{tab.schema}</Crumb>
-          <Crumb icon={<Workflow />} last>
-            Schema diagram
-          </Crumb>
-        </>
-      ) : tab.kind === "activity" ? (
-        <Crumb icon={<Activity />} last>
-          Server activity
-        </Crumb>
-      ) : (
-        <Crumb icon={<SquareTerminal />} last>
-          Console
+    <nav aria-label="Location" className="flex min-w-0 items-center gap-0.5 whitespace-nowrap max-[960px]:hidden">
+      {tab.vhost !== null && (
+        <Crumb icon={<Layers />} mono>
+          {tab.vhost}
         </Crumb>
       )}
+      <Crumb icon={<Icon />} mono={object} last>
+        {label}
+      </Crumb>
     </nav>
   );
 }

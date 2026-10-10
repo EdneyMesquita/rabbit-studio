@@ -6,23 +6,26 @@ import {
   type ConnectionProfile,
   type ConnectionProfileInput,
 } from "@/types/connection";
-import { folderOf, placeInFolder } from "./connectionFolder";
 import type { ConnectionSection, UpdateInput } from "./connectionFormTypes";
 
+/** A new connection's color (DESIGN.md: Teal), so it never starts looking like production's red. */
+const NEW_CONNECTION_COLOR = "#1E9AA6";
+
+function initialInput(editing?: ConnectionProfile, copyOf?: ConnectionProfile): ConnectionProfileInput {
+  if (editing) return profileToInput(editing);
+  if (copyOf) return { ...profileToInput(copyOf), id: null, name: `${copyOf.name} copy` };
+  return { ...newProfileInput(), color: NEW_CONNECTION_COLOR };
+}
+
 /** The connection form's state and its test / save actions. */
-export function useConnectionForm(editing: ConnectionProfile | undefined, onSaved: () => void) {
-  const [input, setInput] = useState<ConnectionProfileInput>(() =>
-    editing ? profileToInput(editing) : newProfileInput(),
-  );
+export function useConnectionForm(editing: ConnectionProfile | undefined, copyOf: ConnectionProfile | undefined, onSaved: () => void) {
+  const [input, setInput] = useState<ConnectionProfileInput>(() => initialInput(editing, copyOf));
   const [section, setSection] = useState<ConnectionSection>("general");
-  const [initialFolder] = useState(() => (editing ? folderOf(editing.id) : null));
-  const [folder, setFolder] = useState(initialFolder);
   // A new connection's id is picked here, so "Save and connect" knows what
   // to connect to; the backend keeps a non-empty id as given.
   const [newId] = useState(() => crypto.randomUUID());
   const [testing, setTesting] = useState(false);
-  const { saveProfile, testConnection, connect, lastTestResult, loading, error } =
-    useConnectionsStore();
+  const { saveProfile, testConnection, connect, lastTestResult, loading, error } = useConnectionsStore();
 
   // Test result and error live in the store, so clear whatever a previous
   // visit left behind instead of reopening the dialog with a stale banner.
@@ -49,9 +52,6 @@ export function useConnectionForm(editing: ConnectionProfile | undefined, onSave
       // saveProfile already put the message in the store; keep the dialog open
       return;
     }
-    if (folder !== initialFolder) {
-      placeInFolder(id, folder, useConnectionsStore.getState().profiles.map((p) => p.id));
-    }
     // connect reports its own failure on the connection's row
     if (andConnect) void connect(id);
     onSaved();
@@ -64,8 +64,6 @@ export function useConnectionForm(editing: ConnectionProfile | undefined, onSave
     update,
     section,
     setSection,
-    folder,
-    setFolder,
     testing,
     test,
     save,

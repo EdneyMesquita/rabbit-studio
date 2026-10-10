@@ -1,13 +1,13 @@
-import { GitCommitHorizontal, Loader2, Lock, Plug } from "lucide-react";
-import { useConsoleStore } from "../../store/consoleStore";
-import { pendingCount } from "../../store/sessionsStore";
+import { Lock, Plug, ShieldAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { ConnectionChip } from "@/components/ui/ConnectionChip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { DEFAULT_INTERVAL, useLiveStore } from "../../hooks/useLive";
+import { useConnectionsStore } from "../../store/connectionsStore";
+import { exchangeLabel } from "../tabs/tabName";
 import { OpenConnectionsItems } from "./OpenConnectionsMenu";
 import { useActiveConnection, useConnectedCount } from "./useActiveConnection";
-import { AssistantStatusItem } from "../assistant/AssistantStatusItem";
 
 interface StatusItemProps {
   className?: string;
@@ -23,100 +23,114 @@ function StatusItem({ className, title, children }: StatusItemProps) {
   );
 }
 
+const ITEM_BUTTON = "inline-flex h-[22px] items-center gap-1.5 rounded-sm px-[7px] whitespace-nowrap hover:bg-hover hover:text-fg";
+
 /**
- * The 26px strip at the bottom: which server the active tab runs on and how
- * many are connected (a menu to jump to or disconnect them), the
- * transaction state; on the right, the tab's table and row count.
+ * Live or paused, as a button. The dot beats once per answer from any
+ * cluster: it is the one thing here that re-renders on every refresh.
+ */
+function LiveIndicator() {
+  const paused = useLiveStore((s) => s.paused);
+  const lastBeat = useLiveStore((s) => s.lastBeat);
+  const seconds = DEFAULT_INTERVAL / 1000;
+  return (
+    <button
+      type="button"
+      className={ITEM_BUTTON}
+      title={paused ? "Live updates are paused. Click to resume." : `Views refresh every ${seconds} s. Click to pause.`}
+      aria-pressed={!paused}
+      onClick={() => useLiveStore.getState().setPaused(!paused)}
+    >
+      <span
+        key={paused ? "paused" : lastBeat}
+        aria-hidden
+        className={cn("size-1.5 rounded-full", paused ? "bg-fg-3/60" : "live-beat bg-ok")}
+      />
+      {paused ? "Paused" : `Live · ${seconds}s`}
+    </button>
+  );
+}
+
+/**
+ * The 26px strip at the bottom: which cluster the active tab speaks for and
+ * its versions, how many are connected (a menu to jump to or disconnect
+ * them), live updates, the connection's guards; on the right, where the tab is.
  */
 export function StatusBar() {
   const active = useActiveConnection();
   const connected = useConnectedCount();
+  const saved = useConnectionsStore((s) => s.profiles.length);
   const tab = active?.tab;
-  const tx = useConsoleStore((s) => (tab ? (s.consoles[tab.id]?.tx ?? "idle") : "idle"));
+  const session = active?.session;
+  const object = tab && (tab.kind === "queue" || tab.kind === "exchange") && tab.vhost !== null;
 
   return (
     <footer className="flex h-[26px] shrink-0 items-center gap-0.5 overflow-hidden border-t border-seam bg-panel px-2 text-xs text-fg-2">
-      {active ? (
+      {active?.connection ? (
         <StatusItem className="min-w-0">
-          <ConnectionChip name={active.tab.connection.name} color={active.color} size="dot" />
-          <span className="truncate font-medium text-fg">{active.tab.connection.name}</span>
-          {active.session?.serverVersion && <span>PostgreSQL {active.session.serverVersion}</span>}
+          <ConnectionChip name={active.connection.name} color={active.color} size="dot" />
+          <span className="truncate font-medium text-fg">{active.connection.name}</span>
+          {session?.serverVersion && <span>RabbitMQ {session.serverVersion}</span>}
         </StatusItem>
       ) : (
-        connected === 0 && <StatusItem>No connection open</StatusItem>
+        <StatusItem>
+          <span className="font-medium text-fg">Workspace</span>
+        </StatusItem>
       )}
-      {connected > 0 && (
+      {saved > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="inline-flex h-[22px] items-center gap-1.5 rounded-sm px-[7px] whitespace-nowrap hover:bg-hover hover:text-fg"
-              title="Manage open connections"
-            >
+            <button type="button" className={ITEM_BUTTON} title="Manage open connections" disabled={connected === 0}>
               <Plug className="size-3" />
-              {connected} connected
+              {connected} of {saved} connected
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-64">
-            <OpenConnectionsItems activeId={active?.tab.connection.id ?? null} />
+            <OpenConnectionsItems activeId={active?.connection?.id ?? null} />
           </DropdownMenuContent>
         </DropdownMenu>
       )}
-      {active?.session?.readOnly && (
-        <StatusItem className="text-warn">
+      <LiveIndicator />
+      {session?.readOnly && (
+        <StatusItem className="text-warn" title="Nothing that changes the broker is offered on this connection">
           <Lock className="size-3" />
           Read-only
         </StatusItem>
       )}
-      {tab?.kind === "table" && pendingCount(tab) > 0 ? (
-        <StatusItem className="text-warn">
-          <span className="size-[7px] rounded-full bg-warn" />
-          {pendingCount(tab)} uncommitted
+      {active?.profile?.typedConfirmation && !session?.readOnly && (
+        <StatusItem className="max-[1100px]:hidden" title="Purge, delete and the like ask for the connection's name">
+          <ShieldAlert className="size-3" />
+          Destructive actions ask for the name
         </StatusItem>
-      ) : tx === "active" || tx === "failed" ? (
-        <StatusItem className={tx === "failed" ? "text-danger" : "text-warn"}>
-          <span className={cn("size-[7px] rounded-full", tx === "failed" ? "bg-danger" : "bg-warn")} />
-          {tx === "failed" ? "Transaction failed" : "In transaction"}
+      )}
+      {session && (
+        <StatusItem
+          className={session.amqp ? undefined : "text-fg-3"}
+          title={session.amqp ? "AMQP is on: moving, replaying and reading streams work" : "AMQP is off for this connection: moving, replaying and streams are unavailable"}
+        >
+          AMQP {session.amqp ? "on" : "off"}
         </StatusItem>
-      ) : (
-        active && (
-          <StatusItem title="Each statement commits on its own">
-            <GitCommitHorizontal className="size-3" />
-            Auto-commit
-          </StatusItem>
-        )
       )}
       <span className="flex-1" />
-      {tab?.kind === "table" && (
+      {object ? (
+        <StatusItem className="min-w-0">
+          <span className="truncate font-data">
+            {tab.vhost} / {tab.kind === "exchange" ? exchangeLabel(tab.name ?? "") : tab.name}
+          </span>
+        </StatusItem>
+      ) : session ? (
         <>
           <StatusItem className="min-w-0">
             <span className="truncate font-data">
-              {tab.database}.{tab.schema}.{tab.table}
+              {session.user}
+              {session.clusterName ? `@${session.clusterName}` : ""}
             </span>
           </StatusItem>
-          {tab.loading ? (
-            <StatusItem>
-              <Loader2 className="size-3 animate-spin" />
-              Running
-            </StatusItem>
-          ) : (
-            <>
-              {(tab.exactCount ?? tab.info?.rowEstimate) != null && (
-                <StatusItem className="tabular-nums">
-                  {tab.exactCount === null ? "~" : ""}
-                  {(tab.exactCount ?? tab.info?.rowEstimate ?? 0).toLocaleString("en")} rows
-                </StatusItem>
-              )}
-              {tab.queryMs !== null && <StatusItem className="tabular-nums">{tab.queryMs} ms</StatusItem>}
-            </>
-          )}
+          {session.erlangVersion && <StatusItem className="max-[960px]:hidden">Erlang {session.erlangVersion}</StatusItem>}
         </>
+      ) : (
+        !active?.connection && saved > 0 && <StatusItem>{saved} {saved === 1 ? "cluster" : "clusters"}</StatusItem>
       )}
-      {tab?.kind === "console" && (
-        <StatusItem className="font-data">{tab.database}</StatusItem>
-      )}
-      {tab && <StatusItem>SQL</StatusItem>}
-      <AssistantStatusItem />
     </footer>
   );
 }

@@ -15,9 +15,6 @@ export default defineConfig(() => ({
     // "@/..." resolves to src/, matching tsconfig paths (shadcn/ui imports it)
     alias: {
       "@": new URL("./src", import.meta.url).pathname,
-      // Monaco's files by path, CSS included, which its exports map hides
-      // (see src/lib/monacoEditor.ts).
-      "monaco-esm/": new URL("./node_modules/monaco-editor/esm/vs/", import.meta.url).pathname,
     },
   },
 

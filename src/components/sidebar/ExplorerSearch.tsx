@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 interface ExplorerSearchProps {
   value: string;
   onChange: (value: string) => void;
-  /** Enter: open the first table found. */
+  /** Enter: open the first match. */
   onSubmit: () => void;
 }
 
@@ -18,8 +18,8 @@ export function ExplorerSearch({ value, onChange, onSubmit }: ExplorerSearchProp
       />
       <Input
         className="h-7 pl-7"
-        placeholder="Search connections and tables"
-        aria-label="Search connections and tables"
+        placeholder="Search queues, exchanges, vhosts"
+        aria-label="Search queues, exchanges, vhosts and connections"
         spellCheck={false}
         value={value}
         onChange={(e) => onChange(e.target.value)}

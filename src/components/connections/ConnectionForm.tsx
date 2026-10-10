@@ -13,9 +13,11 @@ import { connectionColor } from "@/lib/connectionColor";
 import { useConnectionsStore } from "@/store/connectionsStore";
 import type { ConnectionProfile, ConnectionProfileInput } from "@/types/connection";
 import { AdvancedSection } from "./AdvancedSection";
+import { AmqpSection } from "./AmqpSection";
 import { ConnectionFormNav } from "./ConnectionFormNav";
-import type { ConnectionSection } from "./connectionFormTypes";
+import { managementTls, type ConnectionSection } from "./connectionFormTypes";
 import { GeneralSection } from "./GeneralSection";
+import { SafetySection } from "./SafetySection";
 import { SshSection } from "./SshSection";
 import { TestResult } from "./TestResult";
 import { TlsSection } from "./TlsSection";
@@ -24,22 +26,28 @@ import { useConnectionForm } from "./useConnectionForm";
 interface ConnectionFormProps {
   /** A saved profile to edit; a new connection when absent. */
   editing?: ConnectionProfile;
+  /** A saved profile to start a new connection from (Duplicate); its secrets stay behind. */
+  copyOf?: ConnectionProfile;
   onSaved: () => void;
   onCancel: () => void;
 }
 
 // Sections hide their fields, so the nav says which ones hold settings.
 function sectionStates(input: ConnectionProfileInput): Partial<Record<ConnectionSection, string>> {
-  const advancedSet = Object.values(input.advanced).filter((v) => v !== null).length;
+  const { requestTimeoutMs, refreshIntervalMs, showSystemObjects } = input.advanced;
+  const advancedSet = [requestTimeoutMs, refreshIntervalMs].filter((v) => v !== null).length + (showSystemObjects ? 1 : 0);
+  const strict = input.environment === "production" || input.advanced.typedConfirmation;
   return {
-    tls: input.tls.sslMode,
-    ssh: input.sshTunnel?.enabled ? "On" : "Off",
+    tls: managementTls(input) ? "on" : "off",
+    amqp: input.amqp.enabled ? (input.amqp.tls ? "amqps" : "on") : "off",
+    ssh: input.sshTunnel?.enabled ? "on" : "off",
+    safety: input.advanced.readOnly ? "read-only" : strict ? "strict" : "standard",
     advanced: advancedSet > 0 ? `${advancedSet} set` : undefined,
   };
 }
 
-export function ConnectionForm({ editing, onSaved, onCancel }: ConnectionFormProps) {
-  const form = useConnectionForm(editing, onSaved);
+export function ConnectionForm({ editing, copyOf, onSaved, onCancel }: ConnectionFormProps) {
+  const form = useConnectionForm(editing, copyOf, onSaved);
   const { input, update, section, loading } = form;
   const idPrefix = useId();
   const editingActive = useConnectionsStore(
@@ -56,11 +64,11 @@ export function ConnectionForm({ editing, onSaved, onCancel }: ConnectionFormPro
           e.preventDefault();
           document.getElementById("conn-name")?.focus();
         }}
-        className="grid h-[min(600px,calc(100%-2rem))] w-[min(780px,calc(100%-2rem))] max-w-none grid-cols-[196px_minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-none"
+        className="grid h-[min(640px,calc(100%-2rem))] w-[min(780px,calc(100%-2rem))] max-w-none grid-cols-[196px_minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-none"
       >
         <DialogHeader className="col-span-full">
           <DialogTitle>
-            {editing ? `Edit connection · ${editing.name}` : "New connection"}
+            {editing ? `Edit connection · ${editing.name}` : copyOf ? `New connection from ${copyOf.name}` : "New connection"}
           </DialogTitle>
         </DialogHeader>
 
@@ -92,16 +100,17 @@ export function ConnectionForm({ editing, onSaved, onCancel }: ConnectionFormPro
               {form.error}
             </p>
           )}
-          {section === "general" && (
-            <GeneralSection
-              {...sectionProps}
-              folder={form.folder}
-              onFolderChange={form.setFolder}
-              autoColor={connectionColor(form.id)}
-            />
+          {copyOf && section === "general" && (
+            <p className="flex items-start gap-2 rounded-md bg-fg/6 px-3 py-2 text-sm text-fg-2">
+              <Info className="mt-px size-3.5 shrink-0" />
+              Saved passwords aren't copied: enter them again.
+            </p>
           )}
+          {section === "general" && <GeneralSection {...sectionProps} autoColor={connectionColor(form.id)} />}
           {section === "tls" && <TlsSection {...sectionProps} />}
+          {section === "amqp" && <AmqpSection {...sectionProps} />}
           {section === "ssh" && <SshSection {...sectionProps} />}
+          {section === "safety" && <SafetySection {...sectionProps} />}
           {section === "advanced" && <AdvancedSection {...sectionProps} />}
         </DialogBody>
 

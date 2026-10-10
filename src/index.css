@@ -317,3 +317,21 @@ body {
   text-decoration: underline wavy var(--color-danger);
   text-underline-offset: 3px;
 }
+
+/* The status bar's live dot: one expanding ring per refresh (DESIGN.md Live beat). */
+@keyframes live-beat {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-ok) 55%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-ok) 0%, transparent);
+  }
+}
+.live-beat {
+  animation: live-beat 0.8s ease-out 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-beat {
+    animation: none;
+  }
+}

@@ -6,9 +6,8 @@ import { useConnectionColor } from "@/lib/connectionColor";
 import { cn } from "@/lib/utils";
 import { useEditorLayoutStore } from "../../store/editorLayoutStore";
 import type { Tab } from "../../store/sessionsStore";
-import { useScriptsStore } from "../../store/scriptsStore";
 import { PaneNumber } from "../tabs/PaneNumber";
-import { tabName } from "../tabs/tabName";
+import { tabName, tabWhere } from "../tabs/tabName";
 
 interface EditorPaneHeaderProps {
   pane: number;
@@ -27,9 +26,8 @@ export function EditorPaneHeader({ pane, tab, focused, maximized, style }: Edito
   const focusPane = useEditorLayoutStore((s) => s.focusPane);
   const toggleMaximize = useEditorLayoutStore((s) => s.toggleMaximize);
   const closePane = useEditorLayoutStore((s) => s.closePane);
-  const color = useConnectionColor(tab?.connection.id ?? "");
-  const fileName = useScriptsStore((s) => (tab?.kind === "console" ? s.files[tab.id]?.name : undefined));
-  const title = tab ? (fileName ?? tabName(tab)) : "Empty";
+  const color = useConnectionColor(tab?.connection?.id ?? null);
+  const title = tab ? tabName(tab) : "Empty";
 
   return (
     <div
@@ -42,11 +40,11 @@ export function EditorPaneHeader({ pane, tab, focused, maximized, style }: Edito
     >
       {focused && <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-accent" />}
       <PaneNumber pane={pane} focused={focused} />
-      {tab && <ConnectionChip name={tab.connection.name} color={color} size="sm" />}
+      {tab && <ConnectionChip name={tabWhere(tab)} color={color} size="sm" />}
       <span className="min-w-0 truncate font-medium" title={title}>
         {title}
       </span>
-      {tab && <span className="min-w-0 truncate text-fg-3 max-[1100px]:hidden">{tab.connection.name}</span>}
+      {tab && <span className="min-w-0 truncate text-fg-3 max-[1100px]:hidden">{tabWhere(tab)}</span>}
       <span className="flex-1" />
       {tab && (
         <Button

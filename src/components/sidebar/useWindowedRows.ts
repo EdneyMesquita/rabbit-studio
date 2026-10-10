@@ -17,7 +17,7 @@ export interface RowsWindow {
 }
 
 /**
- * Windowing for a long run of tree rows (a database's collections) inside
+ * Windowing for a long run of tree rows (a vhost's queues) inside
  * the explorer's scroller, which also holds every row above and below the
  * list: only the rows in view, plus a margin, are rendered, and spacers
  * keep the scrollbar true to the whole tree. Short lists render whole.
