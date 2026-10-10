@@ -536,6 +536,7 @@ export default function MessagesPanel({
       <div className="flex min-h-0 flex-1">
         <DataTable
           aria-label="Messages"
+          rowNumbers={false}
           rows={shown}
           columns={columns}
           rowKey={rowKey}

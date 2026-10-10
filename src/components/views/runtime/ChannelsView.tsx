@@ -56,7 +56,7 @@ const mode = (ch: Channel) => (ch.confirm ? "C" : "") + (ch.transactional ? "T" 
 
 const columns: Column<Channel>[] = [
   { id: "connection", header: "connection", width: 290, cell: (ch) => connectionName(ch) },
-  { id: "number", header: "#", align: "right", width: 54, cell: (ch) => ch.number },
+  { id: "number", header: "channel", align: "right", width: 64, cell: (ch) => ch.number },
   { id: "user", header: "user", width: 100, cell: (ch) => ch.user },
   { id: "vhost", header: "vhost", width: 110, cell: (ch) => ch.vhost },
   {

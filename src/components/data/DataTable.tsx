@@ -54,6 +54,8 @@ interface DataTableProps<T> {
   /** Muted rows (an idle consumer, a stopped shovel). */
   rowTone?: (row: T) => "muted" | "warn" | "danger" | null;
   empty?: ReactNode;
+  /** The faint # column at the left (DESIGN.md: every data grid has one). */
+  rowNumbers?: boolean;
   "aria-label": string;
   className?: string;
   /** A row key to scroll to and select once it is in the rows. */
@@ -88,6 +90,7 @@ export function DataTable<T>({
   manualSort = false,
   rowTone,
   empty,
+  rowNumbers = true,
   className,
   reveal,
   ...aria
@@ -205,12 +208,21 @@ export function DataTable<T>({
         className="w-full min-w-max table-fixed border-separate border-spacing-0 font-data"
       >
         <colgroup>
+          {rowNumbers && <col style={{ width: 44 }} />}
           {columns.map((c) => (
             <col key={c.id} style={c.width != null ? { width: c.width } : undefined} />
           ))}
         </colgroup>
         <thead>
           <tr>
+            {rowNumbers && (
+              <th
+                scope="col"
+                className="sticky top-0 left-0 z-[3] h-[30px] border-r border-b border-r-line-soft border-b-line bg-panel px-2 text-right font-sans text-sm font-medium text-fg-3"
+              >
+                #
+              </th>
+            )}
             {columns.map((c) => {
               const active = sort?.column === c.id;
               const sortable = !!c.sortValue || manualSort;
@@ -246,7 +258,7 @@ export function DataTable<T>({
         <tbody>
           {virtual.padTop > 0 && (
             <tr aria-hidden style={{ height: virtual.padTop }}>
-              <td colSpan={columns.length} className="p-0" />
+              <td colSpan={columns.length + (rowNumbers ? 1 : 0)} className="p-0" />
             </tr>
           )}
           {Array.from({ length: virtual.end - virtual.start }, (_, offset) => {
@@ -261,6 +273,7 @@ export function DataTable<T>({
                 rowKeyValue={key}
                 columns={columns}
                 selected={sel.has(key)}
+                numbered={rowNumbers}
                 tone={rowTone?.(row) ?? null}
                 onChoose={choose}
                 onOpen={onOpen}
@@ -269,7 +282,7 @@ export function DataTable<T>({
           })}
           {virtual.padBottom > 0 && (
             <tr aria-hidden style={{ height: virtual.padBottom }}>
-              <td colSpan={columns.length} className="p-0" />
+              <td colSpan={columns.length + (rowNumbers ? 1 : 0)} className="p-0" />
             </tr>
           )}
         </tbody>
@@ -294,12 +307,13 @@ interface RowProps<T> {
   rowKeyValue: string;
   columns: Column<T>[];
   selected: boolean;
+  numbered: boolean;
   tone: "muted" | "warn" | "danger" | null;
   onChoose: (key: string, e?: { ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean }) => void;
   onOpen?: (row: T) => void;
 }
 
-function RowImpl<T>({ position, row, rowKeyValue, columns, selected, tone, onChoose, onOpen }: RowProps<T>) {
+function RowImpl<T>({ position, row, rowKeyValue, columns, selected, numbered, tone, onChoose, onOpen }: RowProps<T>) {
   return (
     <tr
       data-row={position}
@@ -310,6 +324,16 @@ function RowImpl<T>({ position, row, rowKeyValue, columns, selected, tone, onCho
       }}
       onDoubleClick={onOpen ? () => onOpen(row) : undefined}
     >
+      {numbered && (
+        <td
+          className={cn(
+            "sticky left-0 z-[1] h-6 border-r border-b border-line-soft px-2 text-right text-fg-3 tabular-nums",
+            selected ? "bg-sel-soft" : "bg-editor group-hover/row:bg-row-hover",
+          )}
+        >
+          {position + 1}
+        </td>
+      )}
       {columns.map((c) => (
         <td
           key={c.id}

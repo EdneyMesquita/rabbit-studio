@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AlertTriangle, CircleAlert, Info, Loader2 } from "lucide-react";
+import { AlertTriangle, CircleAlert, CircleCheck, CircleX, Info, Loader2, Pause, TriangleAlert } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -51,14 +51,28 @@ const toneText: Record<Tone, string> = {
   info: "text-accent-text",
 };
 
-/** A state as a colored dot and a word: never color alone. */
+const toneIcon: Record<Tone, LucideIcon> = {
+  ok: CircleCheck,
+  warn: TriangleAlert,
+  crit: CircleX,
+  idle: Pause,
+  info: Info,
+};
+
+/** A state as an icon in its tone and a word: never color alone. */
 export function StateLabel({ tone, children }: { tone: Tone; children: ReactNode }) {
+  const Icon = toneIcon[tone];
   return (
-    <span className="inline-flex items-center gap-1.5 font-sans text-sm text-fg">
-      <span className={cn("inline-block size-1.5 rounded-full bg-current", toneText[tone])} aria-hidden />
+    <span className="inline-flex items-center gap-[5px] font-sans text-sm text-fg">
+      <Icon className={cn("size-3 shrink-0", toneText[tone])} aria-hidden />
       {children}
     </span>
   );
+}
+
+/** An empty value: one faint dash everywhere, never "none" or a blank. */
+export function Dash() {
+  return <span className="text-fg-3">–</span>;
 }
 
 /** A tinted strip across the view: a warning about what it shows. */
@@ -136,11 +150,44 @@ export function Metrics({ items }: { items: MetricItem[] }) {
 }
 
 /** A section heading inside a view or an inspector. */
-export function SectionHeader({ children, actions }: { children: ReactNode; actions?: ReactNode }) {
+export function SectionHeader({
+  children,
+  count,
+  actions,
+}: {
+  children: ReactNode;
+  /** A faint count after the title ("Headers 9"). */
+  count?: ReactNode;
+  actions?: ReactNode;
+}) {
   return (
-    <div className="flex h-8 shrink-0 items-center gap-2 border-t border-line-soft px-3 text-xs font-semibold tracking-[0.02em] text-fg-2 uppercase first:border-t-0">
-      <span className="min-w-0 flex-1 truncate">{children}</span>
+    <div className="flex h-[30px] shrink-0 items-center gap-1.5 border-t border-line-soft px-3 font-sans text-xs font-semibold text-fg-2 first:border-t-0">
+      <span className="min-w-0 truncate">{children}</span>
+      {count != null && <span className="font-normal text-fg-3">{count}</span>}
+      <span className="flex-1" />
       {actions}
+    </div>
+  );
+}
+
+/** A keyboard key in a footer hint ("Replay ⏎"). */
+export function Keycap({ children }: { children: ReactNode }) {
+  return (
+    <kbd className="inline-flex h-4 min-w-4 items-center justify-center rounded-xs border border-line bg-panel px-1 font-sans text-[10px] leading-none text-fg-2">
+      {children}
+    </kbd>
+  );
+}
+
+/** The quiet strip at the bottom of an inspector: what the keys do. */
+export function KeyHints({ hints }: { hints: [label: string, key: string][] }) {
+  return (
+    <div className="flex shrink-0 flex-wrap gap-3 border-t border-line-soft px-3 py-[7px] text-xs text-fg-3">
+      {hints.map(([label, key]) => (
+        <span key={label} className="inline-flex items-center gap-1.5">
+          {label} <Keycap>{key}</Keycap>
+        </span>
+      ))}
     </div>
   );
 }

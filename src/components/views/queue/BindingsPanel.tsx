@@ -43,7 +43,6 @@ export default function BindingsPanel({ cid, vhost, name, shown }: { cid: string
 
   const columns = useMemo<Column<Binding>[]>(
     () => [
-      { id: "n", header: "#", width: 44, align: "right", cell: (_, i) => <span className="text-fg-3">{i + 1}</span> },
       {
         id: "source",
         header: "source",

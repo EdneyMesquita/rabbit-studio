@@ -52,12 +52,18 @@ function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
+/**
+ * The top of the y axis: twice a nice step (1, 2 or 5 x 10^n), so all three
+ * ticks are round. Counts and rates never step below 1, so a quiet queue
+ * reads 0 / 1 / 2 rather than 0.05 rounded to "0.1" twice.
+ */
 function niceMax(v: number): number {
-  if (v <= 0) return 1;
-  const exp = Math.pow(10, Math.floor(Math.log10(v)));
-  const f = v / exp;
-  const nice = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
-  return nice * exp;
+  const half = Math.max(v, 0) / 2;
+  if (half <= 1) return 2;
+  const exp = Math.pow(10, Math.floor(Math.log10(half)));
+  const f = half / exp;
+  const step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * exp;
+  return step * 2;
 }
 
 function clock(t: number): string {

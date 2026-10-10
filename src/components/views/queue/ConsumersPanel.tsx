@@ -12,7 +12,6 @@ export default function ConsumersPanel({ cid, queue: q, dlq }: { cid: string; qu
   const rows = q.consumer_details ?? [];
   const columns = useMemo<Column<Consumer>[]>(
     () => [
-      { id: "n", header: "#", width: 44, align: "right", cell: (_, i) => <span className="text-fg-3">{i + 1}</span> },
       {
         id: "tag",
         header: "consumer_tag",
