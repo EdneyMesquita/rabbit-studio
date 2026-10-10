@@ -42,7 +42,6 @@ impl CancelToken {
     }
 }
 
-
 pub struct AppState {
     pub connection_store: ConnectionStore,
     pub secret_store: Box<dyn SecretStore>,

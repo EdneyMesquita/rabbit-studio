@@ -148,7 +148,8 @@ impl RabbitSession {
                 || profile.tls.key_file.as_deref().unwrap_or("").is_empty())
         {
             return Err(AppError::InvalidInput(
-                "Certificate login needs a client certificate and key in the TLS section".to_string(),
+                "Certificate login needs a client certificate and key in the TLS section"
+                    .to_string(),
             ));
         }
         let x509 = profile.auth == AuthMethod::X509;
@@ -166,7 +167,10 @@ impl RabbitSession {
         } else {
             None
         };
-        let user = profile.username.clone().unwrap_or_else(|| "guest".to_string());
+        let user = profile
+            .username
+            .clone()
+            .unwrap_or_else(|| "guest".to_string());
         let endpoint = parse_endpoint(&profile.management_url())?;
 
         let mut tunnels = Vec::new();
@@ -243,7 +247,8 @@ impl RabbitSession {
                     user: user.clone(),
                     password: password.clone().unwrap_or_default(),
                     external: profile.auth == AuthMethod::X509,
-                    ca_pem: read_optional(profile.tls.ca_file.as_deref())?.map(|b| String::from_utf8_lossy(&b).into_owned()),
+                    ca_pem: read_optional(profile.tls.ca_file.as_deref())?
+                        .map(|b| String::from_utf8_lossy(&b).into_owned()),
                     identity: match (
                         read_optional(profile.tls.cert_file.as_deref())?,
                         read_optional(profile.tls.key_file.as_deref())?,
@@ -278,7 +283,10 @@ impl RabbitSession {
         let text = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).map(str::to_string);
         // An array since 3.9, a comma-separated string before.
         let tags = match whoami.get("tags") {
-            Some(Value::Array(a)) => a.iter().filter_map(|t| t.as_str().map(str::to_string)).collect(),
+            Some(Value::Array(a)) => a
+                .iter()
+                .filter_map(|t| t.as_str().map(str::to_string))
+                .collect(),
             Some(Value::String(s)) => s
                 .split(',')
                 .map(str::trim)
@@ -378,10 +386,7 @@ fn allowed_when_read_only(method: &Method, path: &str, body: Option<&Value>) -> 
     *method == Method::POST
         && path.starts_with("queues/")
         && path.ends_with("/get")
-        && body
-            .and_then(|b| b.get("ackmode"))
-            .and_then(Value::as_str)
-            == Some("ack_requeue_true")
+        && body.and_then(|b| b.get("ackmode")).and_then(Value::as_str) == Some("ack_requeue_true")
 }
 
 /// A file's bytes when a path is set.
@@ -410,7 +415,9 @@ fn tunnel_auth(
             let ssh = profile.ssh_tunnel.as_ref();
             let path = ssh
                 .and_then(|s| s.private_key_path.clone())
-                .ok_or_else(|| AppError::InvalidInput("SSH private key path not set".to_string()))?;
+                .ok_or_else(|| {
+                    AppError::InvalidInput("SSH private key path not set".to_string())
+                })?;
             let passphrase = if ssh.is_some_and(|s| s.private_key_has_passphrase) {
                 secrets
                     .get(&profile.id, SecretKind::SshKeyPassphrase)
@@ -463,7 +470,8 @@ fn build_client(
             .map_err(|e| AppError::InvalidInput(format!("can't read {cert}: {e}")))?;
         pem.push(b'\n');
         pem.extend(
-            std::fs::read(key).map_err(|e| AppError::InvalidInput(format!("can't read {key}: {e}")))?,
+            std::fs::read(key)
+                .map_err(|e| AppError::InvalidInput(format!("can't read {key}: {e}")))?,
         );
         let identity = reqwest::Identity::from_pem(&pem)
             .map_err(|e| AppError::InvalidInput(format!("the client certificate: {e}")))?;
@@ -523,10 +531,26 @@ mod tests {
         let peek = json!({"count": 5, "ackmode": "ack_requeue_true"});
         let get = json!({"count": 5, "ackmode": "ack_requeue_false"});
         assert!(allowed_when_read_only(&Method::GET, "queues", None));
-        assert!(allowed_when_read_only(&Method::POST, "queues/%2F/q/get", Some(&peek)));
-        assert!(!allowed_when_read_only(&Method::POST, "queues/%2F/q/get", Some(&get)));
-        assert!(!allowed_when_read_only(&Method::DELETE, "queues/%2F/q/contents", None));
-        assert!(!allowed_when_read_only(&Method::POST, "exchanges/%2F/x/publish", Some(&peek)));
+        assert!(allowed_when_read_only(
+            &Method::POST,
+            "queues/%2F/q/get",
+            Some(&peek)
+        ));
+        assert!(!allowed_when_read_only(
+            &Method::POST,
+            "queues/%2F/q/get",
+            Some(&get)
+        ));
+        assert!(!allowed_when_read_only(
+            &Method::DELETE,
+            "queues/%2F/q/contents",
+            None
+        ));
+        assert!(!allowed_when_read_only(
+            &Method::POST,
+            "exchanges/%2F/x/publish",
+            Some(&peek)
+        ));
     }
 
     #[test]
@@ -540,7 +564,11 @@ mod tests {
 
     #[test]
     fn errors_use_the_server_reason() {
-        let e = server_error(404, br#"{"error":"Object Not Found","reason":"Not Found"}"#, "u");
+        let e = server_error(
+            404,
+            br#"{"error":"Object Not Found","reason":"Not Found"}"#,
+            "u",
+        );
         assert_eq!(e.to_string(), "Not Found");
         let e = server_error(401, b"", "alice");
         assert!(e.to_string().contains("alice"));
@@ -559,7 +587,13 @@ mod tests {
             identity: None,
         };
         assert!(t.uri("/").starts_with("amqp://a%40b:p%2Fw@mq:5672/%2F?"));
-        let ext = AmqpTarget { external: true, tls: true, ..t };
-        assert!(ext.uri("orders").starts_with("amqps://mq:5672/orders?auth_mechanism=external"));
+        let ext = AmqpTarget {
+            external: true,
+            tls: true,
+            ..t
+        };
+        assert!(ext
+            .uri("orders")
+            .starts_with("amqps://mq:5672/orders?auth_mechanism=external"));
     }
 }

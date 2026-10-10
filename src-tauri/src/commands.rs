@@ -77,7 +77,11 @@ async fn materialize_profile(
     };
 
     let mut oauth2 = input.oauth2;
-    if let Some(secret) = input.oauth2_client_secret.as_deref().filter(|s| !s.is_empty()) {
+    if let Some(secret) = input
+        .oauth2_client_secret
+        .as_deref()
+        .filter(|s| !s.is_empty())
+    {
         state
             .secret_store
             .set(&id, SecretKind::OAuth2ClientSecret, secret)
@@ -528,7 +532,9 @@ fn method(name: &str) -> AppResult<Method> {
         "PUT" => Ok(Method::PUT),
         "POST" => Ok(Method::POST),
         "DELETE" => Ok(Method::DELETE),
-        other => Err(AppError::InvalidInput(format!("unsupported method {other}"))),
+        other => Err(AppError::InvalidInput(format!(
+            "unsupported method {other}"
+        ))),
     }
 }
 
@@ -677,7 +683,11 @@ pub async fn transfer_messages<R: Runtime>(
         summary.skipped,
         summary.failed,
         summary.missing,
-        if summary.cancelled { " (cancelled)" } else { "" }
+        if summary.cancelled {
+            " (cancelled)"
+        } else {
+            ""
+        }
     );
     Ok(summary)
 }
@@ -726,8 +736,8 @@ pub async fn export_definitions(
     };
     let result = async {
         let defs = session.get_json(&path).await?;
-        let raw = serde_json::to_vec_pretty(&defs)
-            .map_err(|e| AppError::InvalidInput(e.to_string()))?;
+        let raw =
+            serde_json::to_vec_pretty(&defs).map_err(|e| AppError::InvalidInput(e.to_string()))?;
         std::fs::write(&dest_path, &raw)?;
         Ok(raw.len() as u64)
     }
@@ -764,13 +774,19 @@ pub async fn import_definitions(
 /// Reads a text file the user picked (definitions preview, a payload).
 #[tauri::command]
 pub async fn read_text_file(path: String) -> AppResult<String> {
-    logged("read_text_file", std::fs::read_to_string(&path).map_err(AppError::from))
+    logged(
+        "read_text_file",
+        std::fs::read_to_string(&path).map_err(AppError::from),
+    )
 }
 
 /// Writes text to a file the user picked (exported messages).
 #[tauri::command]
 pub async fn write_text_file(path: String, contents: String) -> AppResult<()> {
-    logged("write_text_file", std::fs::write(&path, contents).map_err(AppError::from))
+    logged(
+        "write_text_file",
+        std::fs::write(&path, contents).map_err(AppError::from),
+    )
 }
 
 /// The sidebar's folder tree, or null before one was saved.
@@ -903,7 +919,10 @@ mod tests {
         assert_eq!(saved.username.as_deref(), Some("ops"));
         assert!(saved.has_password);
         assert_eq!(
-            secrets.get(&saved.id, SecretKind::Password).unwrap().as_deref(),
+            secrets
+                .get(&saved.id, SecretKind::Password)
+                .unwrap()
+                .as_deref(),
             Some("s3cret")
         );
         std::fs::remove_dir_all(dir).ok();

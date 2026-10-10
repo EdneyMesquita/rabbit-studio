@@ -10,9 +10,9 @@ use lapin::options::{
     BasicAckOptions, BasicCancelOptions, BasicConsumeOptions, BasicNackOptions,
     BasicPublishOptions, BasicQosOptions, ConfirmSelectOptions, QueueDeclareOptions,
 };
-use lapin::{Confirmation, PublisherConfirm};
 use lapin::types::{AMQPValue, FieldTable, LongString};
 use lapin::{Channel, Connection, ConnectionProperties};
+use lapin::{Confirmation, PublisherConfirm};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -47,16 +47,26 @@ pub async fn open(target: &AmqpTarget, vhost: &str) -> AppResult<Connection> {
                 .map(|(pem, key)| lapin::tcp::OwnedIdentity::PKCS8 { pem, key }),
             cert_chain: target.ca_pem.clone(),
         };
-        Connection::connect_with_config(&uri, props, config, lapin::runtime::default_runtime()?).await
+        Connection::connect_with_config(&uri, props, config, lapin::runtime::default_runtime()?)
+            .await
     };
     tokio::time::timeout(Duration::from_secs(10), connect)
-    .await
-    .map_err(|_| AppError::Amqp(format!("{}:{} didn't answer in time", target.host, target.port)))?
-    .map_err(|e| AppError::Amqp(format!("can't open {}:{} ({e})", target.host, target.port)))
+        .await
+        .map_err(|_| {
+            AppError::Amqp(format!(
+                "{}:{} didn't answer in time",
+                target.host, target.port
+            ))
+        })?
+        .map_err(|e| AppError::Amqp(format!("can't open {}:{} ({e})", target.host, target.port)))
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "kind",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
 pub enum TransferTarget {
     /// Another queue of the same vhost, through the default exchange.
     Queue { queue: String },
@@ -158,7 +168,11 @@ async fn run_transfer(
     }
     // Choosing holds every message looked at until the end, so the broker
     // must be allowed to send them all.
-    let prefetch = if wanted.is_some() { scan.min(u64::from(u16::MAX)) as u16 } else { 500 };
+    let prefetch = if wanted.is_some() {
+        scan.min(u64::from(u16::MAX)) as u16
+    } else {
+        500
+    };
     src.basic_qos(prefetch, BasicQosOptions::default())
         .await
         .map_err(amqp_err)?;
@@ -247,7 +261,10 @@ async fn run_transfer(
     }
     settle(&src, &mut batch, &mut summary, &mut put_back).await?;
     let _ = src
-        .basic_cancel("rabbit-studio-transfer".into(), BasicCancelOptions::default())
+        .basic_cancel(
+            "rabbit-studio-transfer".into(),
+            BasicCancelOptions::default(),
+        )
         .await;
     for tag in put_back {
         src.basic_nack(
@@ -300,9 +317,13 @@ pub enum StreamOffset {
     First,
     Last,
     Next,
-    Offset { value: i64 },
+    Offset {
+        value: i64,
+    },
     /// Seconds since the epoch.
-    Timestamp { value: u64 },
+    Timestamp {
+        value: u64,
+    },
 }
 
 /// Reads up to `count` messages of a stream from `offset`, without moving
@@ -399,22 +420,34 @@ mod amqp_live {
         let conn = open(&target(), "/").await.expect("cluster A must be up");
         let ch = conn.create_channel().await.unwrap();
         for (i, q) in names.iter().enumerate() {
-            let _ = ch.queue_delete((*q).into(), QueueDeleteOptions::default()).await;
+            let _ = ch
+                .queue_delete((*q).into(), QueueDeleteOptions::default())
+                .await;
             let mut args = FieldTable::default();
             if i == 0 {
                 if let Some(dlq) = dlx_to {
-                    args.insert("x-dead-letter-exchange".into(), AMQPValue::LongString("".into()));
-                    args.insert("x-dead-letter-routing-key".into(), AMQPValue::LongString(dlq.into()));
+                    args.insert(
+                        "x-dead-letter-exchange".into(),
+                        AMQPValue::LongString("".into()),
+                    );
+                    args.insert(
+                        "x-dead-letter-routing-key".into(),
+                        AMQPValue::LongString(dlq.into()),
+                    );
                 }
             }
-            ch.queue_declare((*q).into(), QueueDeclareOptions::default(), args).await.unwrap();
+            ch.queue_declare((*q).into(), QueueDeclareOptions::default(), args)
+                .await
+                .unwrap();
         }
         conn
     }
 
     async fn publish(conn: &Connection, queue: &str, bodies: &[&str]) {
         let ch = conn.create_channel().await.unwrap();
-        ch.confirm_select(ConfirmSelectOptions::default()).await.unwrap();
+        ch.confirm_select(ConfirmSelectOptions::default())
+            .await
+            .unwrap();
         for (i, b) in bodies.iter().enumerate() {
             ch.basic_publish(
                 "".into(),
@@ -434,7 +467,10 @@ mod amqp_live {
         let ch = conn.create_channel().await.unwrap();
         ch.queue_declare(
             queue.into(),
-            QueueDeclareOptions { passive: true, ..Default::default() },
+            QueueDeclareOptions {
+                passive: true,
+                ..Default::default()
+            },
             FieldTable::default(),
         )
         .await
@@ -456,7 +492,15 @@ mod amqp_live {
             last = m.delivery.delivery_tag;
         }
         if last > 0 {
-            ch.basic_nack(last, BasicNackOptions { multiple: true, requeue: true }).await.unwrap();
+            ch.basic_nack(
+                last,
+                BasicNackOptions {
+                    multiple: true,
+                    requeue: true,
+                },
+            )
+            .await
+            .unwrap();
         }
         ch.close(200, "done".into()).await.unwrap();
         out
@@ -472,11 +516,15 @@ mod amqp_live {
         let input = TransferInput {
             vhost: "/".into(),
             queue: "rs-test.src".into(),
-            target: TransferTarget::Queue { queue: "rs-test.dst".into() },
+            target: TransferTarget::Queue {
+                queue: "rs-test.dst".into(),
+            },
             select: Some(vec![fps[1].clone(), fps[3].clone()]),
             limit: None,
         };
-        let summary = transfer(&target(), input, CancelToken::default(), |_, _| {}).await.unwrap();
+        let summary = transfer(&target(), input, CancelToken::default(), |_, _| {})
+            .await
+            .unwrap();
         assert_eq!((summary.done, summary.skipped, summary.missing), (2, 2, 0));
         assert_eq!(depth(&conn, "rs-test.src").await, 2);
         assert_eq!(depth(&conn, "rs-test.dst").await, 2);
@@ -490,13 +538,22 @@ mod amqp_live {
         // reject both, so they dead-letter with x-death
         let ch = conn.create_channel().await.unwrap();
         while let Some(m) = ch
-            .basic_get("rs-test.work".into(), lapin::options::BasicGetOptions::default())
+            .basic_get(
+                "rs-test.work".into(),
+                lapin::options::BasicGetOptions::default(),
+            )
             .await
             .unwrap()
         {
-            ch.basic_nack(m.delivery.delivery_tag, BasicNackOptions { multiple: false, requeue: false })
-                .await
-                .unwrap();
+            ch.basic_nack(
+                m.delivery.delivery_tag,
+                BasicNackOptions {
+                    multiple: false,
+                    requeue: false,
+                },
+            )
+            .await
+            .unwrap();
         }
         tokio::time::sleep(Duration::from_millis(300)).await;
         assert_eq!(depth(&conn, "rs-test.dlq").await, 2);
@@ -507,7 +564,9 @@ mod amqp_live {
             select: None,
             limit: None,
         };
-        let summary = transfer(&target(), input, CancelToken::default(), |_, _| {}).await.unwrap();
+        let summary = transfer(&target(), input, CancelToken::default(), |_, _| {})
+            .await
+            .unwrap();
         assert_eq!(summary.done, 2);
         assert_eq!(depth(&conn, "rs-test.dlq").await, 0);
         assert_eq!(depth(&conn, "rs-test.work").await, 2);
@@ -516,14 +575,30 @@ mod amqp_live {
     #[tokio::test]
     #[ignore]
     async fn amqp_live_reads_a_stream_from_an_offset() {
-        let first = read_stream(&target(), "orders", "orders.audit", StreamOffset::First, 5, 1000, CancelToken::default())
-            .await
-            .unwrap();
+        let first = read_stream(
+            &target(),
+            "orders",
+            "orders.audit",
+            StreamOffset::First,
+            5,
+            1000,
+            CancelToken::default(),
+        )
+        .await
+        .unwrap();
         assert_eq!(first.len(), 5);
         assert_eq!(first[0]["offset"], 0);
-        let later = read_stream(&target(), "orders", "orders.audit", StreamOffset::Offset { value: 100 }, 3, 1000, CancelToken::default())
-            .await
-            .unwrap();
+        let later = read_stream(
+            &target(),
+            "orders",
+            "orders.audit",
+            StreamOffset::Offset { value: 100 },
+            3,
+            1000,
+            CancelToken::default(),
+        )
+        .await
+        .unwrap();
         assert_eq!(later[0]["offset"], 100);
     }
 }

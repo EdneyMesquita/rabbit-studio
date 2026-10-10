@@ -28,7 +28,12 @@ struct State {
 }
 
 impl OAuthClient {
-    pub fn new(issuer: &str, client_id: &str, secret: String, scope: Option<String>) -> AppResult<Self> {
+    pub fn new(
+        issuer: &str,
+        client_id: &str,
+        secret: String,
+        scope: Option<String>,
+    ) -> AppResult<Self> {
         if issuer.trim().is_empty() || client_id.trim().is_empty() {
             return Err(AppError::InvalidInput(
                 "OAuth 2 needs an issuer and a client ID".to_string(),
@@ -71,7 +76,17 @@ impl OAuthClient {
     async fn discover(&self) -> String {
         let url = format!("{}/.well-known/openid-configuration", self.issuer);
         let found = async {
-            let doc: Value = self.http.get(&url).send().await.ok()?.error_for_status().ok()?.json().await.ok()?;
+            let doc: Value = self
+                .http
+                .get(&url)
+                .send()
+                .await
+                .ok()?
+                .error_for_status()
+                .ok()?
+                .json()
+                .await
+                .ok()?;
             doc.get("token_endpoint")?.as_str().map(str::to_string)
         }
         .await;
@@ -115,7 +130,10 @@ impl OAuthClient {
             .and_then(Value::as_str)
             .ok_or_else(|| AppError::Http("the OAuth 2 issuer sent no access token".to_string()))?
             .to_string();
-        let lifetime = answer.get("expires_in").and_then(Value::as_u64).unwrap_or(300);
+        let lifetime = answer
+            .get("expires_in")
+            .and_then(Value::as_u64)
+            .unwrap_or(300);
         Ok((token, Duration::from_secs(lifetime)))
     }
 }

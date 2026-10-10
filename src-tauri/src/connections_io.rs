@@ -154,8 +154,7 @@ pub fn parse_connections_file(raw: &str) -> AppResult<Vec<Result<ParsedImportEnt
             .collect());
     }
     Err(AppError::InvalidInput(
-        "Unrecognized file (expected a Rabbit Studio connections export)"
-            .to_string(),
+        "Unrecognized file (expected a Rabbit Studio connections export)".to_string(),
     ))
 }
 

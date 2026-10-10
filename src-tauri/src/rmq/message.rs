@@ -43,7 +43,12 @@ pub fn fingerprint_http(messages: &mut Value) {
         return;
     };
     for m in list {
-        let text = |k: &str| m.get(k).and_then(Value::as_str).unwrap_or_default().to_string();
+        let text = |k: &str| {
+            m.get(k)
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string()
+        };
         let props = m.get("properties").cloned().unwrap_or(Value::Null);
         let payload = text("payload");
         let bytes = if text("payload_encoding") == "base64" {
@@ -54,7 +59,9 @@ pub fn fingerprint_http(messages: &mut Value) {
         let fp = fingerprint(
             &text("exchange"),
             &text("routing_key"),
-            m.get("payload_bytes").and_then(Value::as_u64).unwrap_or(bytes.len() as u64),
+            m.get("payload_bytes")
+                .and_then(Value::as_u64)
+                .unwrap_or(bytes.len() as u64),
             props.get("message_id").and_then(Value::as_str),
             props.get("timestamp").and_then(Value::as_u64),
             &bytes,
@@ -158,9 +165,7 @@ pub fn value_json(v: &AMQPValue) -> Value {
         AMQPValue::LongLongInt(n) => Value::from(*n),
         AMQPValue::Float(n) => Value::from(*n),
         AMQPValue::Double(n) => Value::from(*n),
-        AMQPValue::DecimalValue(d) => {
-            Value::from(d.value as f64 / 10f64.powi(i32::from(d.scale)))
-        }
+        AMQPValue::DecimalValue(d) => Value::from(d.value as f64 / 10f64.powi(i32::from(d.scale))),
         AMQPValue::ShortString(s) => Value::from(s.as_str()),
         AMQPValue::LongString(s) => Value::from(String::from_utf8_lossy(s.as_bytes()).into_owned()),
         AMQPValue::FieldArray(a) => Value::Array(a.as_slice().iter().map(value_json).collect()),
@@ -191,7 +196,12 @@ pub fn origin(p: &BasicProperties) -> Option<(String, String)> {
         .and_then(|a| a.first())
         .and_then(Value::as_str)
         .map(str::to_string)
-        .or_else(|| first.get("queue").and_then(Value::as_str).map(str::to_string))?;
+        .or_else(|| {
+            first
+                .get("queue")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+        })?;
     Some((exchange, rk))
 }
 
@@ -209,7 +219,14 @@ mod tests {
             "properties": {"message_id": "m-1", "timestamp": 1700000000}
         }]);
         fingerprint_http(&mut http);
-        let expected = fingerprint("orders.events", "order.created", payload.len() as u64, Some("m-1"), Some(1700000000), payload);
+        let expected = fingerprint(
+            "orders.events",
+            "order.created",
+            payload.len() as u64,
+            Some("m-1"),
+            Some(1700000000),
+            payload,
+        );
         assert_eq!(http[0]["fingerprint"], expected);
     }
 

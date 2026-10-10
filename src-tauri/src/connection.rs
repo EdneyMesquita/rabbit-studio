@@ -125,15 +125,11 @@ mod tests {
 
     #[test]
     fn extracts_credentials_from_a_uri() {
-        let uri =
-            "https://exampleuser:examplepass@mq.example.net:15671/rabbit?x=1";
+        let uri = "https://exampleuser:examplepass@mq.example.net:15671/rabbit?x=1";
         let (stripped, user, pass) = extract_uri_credentials(uri);
         assert_eq!(user.as_deref(), Some("exampleuser"));
         assert_eq!(pass.as_deref(), Some("examplepass"));
-        assert_eq!(
-            stripped,
-            "https://mq.example.net:15671/rabbit?x=1"
-        );
+        assert_eq!(stripped, "https://mq.example.net:15671/rabbit?x=1");
     }
 
     #[test]

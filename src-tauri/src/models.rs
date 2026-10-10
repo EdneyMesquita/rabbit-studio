@@ -352,7 +352,6 @@ pub struct ConnectionsImportSummary {
     pub warnings: Vec<String>,
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

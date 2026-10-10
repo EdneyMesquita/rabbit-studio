@@ -385,10 +385,7 @@ mod tests {
             short_target("webview::onError@http://x/a.js:1:2"),
             "webview"
         );
-        assert_eq!(
-            short_target("lapin::channel"),
-            "lapin::channel"
-        );
+        assert_eq!(short_target("lapin::channel"), "lapin::channel");
     }
 
     #[test]
