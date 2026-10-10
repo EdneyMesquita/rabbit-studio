@@ -547,10 +547,8 @@ pub async fn mgmt(
         ),
         _ => {}
     }
-    if method != Method::GET {
-        if result.is_ok() {
-            log::info!("{method_name} {op} [{}]", session.name);
-        }
+    if method != Method::GET && result.is_ok() {
+        log::info!("{method_name} {op} [{}]", session.name);
     }
     result.map(tauri::ipc::Response::new)
 }

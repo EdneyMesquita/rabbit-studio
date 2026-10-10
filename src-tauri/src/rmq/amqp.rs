@@ -361,3 +361,154 @@ pub async fn reachable(host: &str, port: u16) -> bool {
     .await
     .is_ok_and(|r| r.is_ok())
 }
+
+/// Against dev cluster A (`docker compose -f docker-compose.dev.yml up -d`):
+/// `cargo test --lib -- --ignored amqp_live`.
+#[cfg(test)]
+mod amqp_live {
+    use super::*;
+    use lapin::options::{QueueDeclareOptions, QueueDeleteOptions};
+    use lapin::BasicProperties;
+
+    fn target() -> AmqpTarget {
+        AmqpTarget {
+            host: "127.0.0.1".into(),
+            port: 5673,
+            tls: false,
+            user: "admin".into(),
+            password: "admin".into(),
+        }
+    }
+
+    async fn setup(names: &[&str], dlx_to: Option<&str>) -> Connection {
+        let conn = open(&target(), "/").await.expect("cluster A must be up");
+        let ch = conn.create_channel().await.unwrap();
+        for (i, q) in names.iter().enumerate() {
+            let _ = ch.queue_delete((*q).into(), QueueDeleteOptions::default()).await;
+            let mut args = FieldTable::default();
+            if i == 0 {
+                if let Some(dlq) = dlx_to {
+                    args.insert("x-dead-letter-exchange".into(), AMQPValue::LongString("".into()));
+                    args.insert("x-dead-letter-routing-key".into(), AMQPValue::LongString(dlq.into()));
+                }
+            }
+            ch.queue_declare((*q).into(), QueueDeclareOptions::default(), args).await.unwrap();
+        }
+        conn
+    }
+
+    async fn publish(conn: &Connection, queue: &str, bodies: &[&str]) {
+        let ch = conn.create_channel().await.unwrap();
+        ch.confirm_select(ConfirmSelectOptions::default()).await.unwrap();
+        for (i, b) in bodies.iter().enumerate() {
+            ch.basic_publish(
+                "".into(),
+                queue.into(),
+                BasicPublishOptions::default(),
+                b.as_bytes(),
+                BasicProperties::default().with_message_id(format!("m-{i}").into()),
+            )
+            .await
+            .unwrap()
+            .await
+            .unwrap();
+        }
+    }
+
+    async fn depth(conn: &Connection, queue: &str) -> u32 {
+        let ch = conn.create_channel().await.unwrap();
+        ch.queue_declare(
+            queue.into(),
+            QueueDeclareOptions { passive: true, ..Default::default() },
+            FieldTable::default(),
+        )
+        .await
+        .unwrap()
+        .message_count()
+    }
+
+    async fn fingerprints(conn: &Connection, queue: &str) -> Vec<String> {
+        // basic.get every message, then put them all back
+        let ch = conn.create_channel().await.unwrap();
+        let mut out = Vec::new();
+        let mut last = 0;
+        while let Some(m) = ch
+            .basic_get(queue.into(), lapin::options::BasicGetOptions::default())
+            .await
+            .unwrap()
+        {
+            out.push(fingerprint_delivery(&m.delivery));
+            last = m.delivery.delivery_tag;
+        }
+        if last > 0 {
+            ch.basic_nack(last, BasicNackOptions { multiple: true, requeue: true }).await.unwrap();
+        }
+        ch.close(200, "done".into()).await.unwrap();
+        out
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn amqp_live_moves_only_the_chosen_messages() {
+        let conn = setup(&["rs-test.src", "rs-test.dst"], None).await;
+        publish(&conn, "rs-test.src", &["a", "b", "c", "d"]).await;
+        let fps = fingerprints(&conn, "rs-test.src").await;
+        assert_eq!(fps.len(), 4);
+        let input = TransferInput {
+            vhost: "/".into(),
+            queue: "rs-test.src".into(),
+            target: TransferTarget::Queue { queue: "rs-test.dst".into() },
+            select: Some(vec![fps[1].clone(), fps[3].clone()]),
+            limit: None,
+        };
+        let summary = transfer(&target(), input, CancelToken::default(), |_, _| {}).await.unwrap();
+        assert_eq!((summary.done, summary.skipped, summary.missing), (2, 2, 0));
+        assert_eq!(depth(&conn, "rs-test.src").await, 2);
+        assert_eq!(depth(&conn, "rs-test.dst").await, 2);
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn amqp_live_replays_dead_letters_to_their_origin() {
+        let conn = setup(&["rs-test.work", "rs-test.dlq"], Some("rs-test.dlq")).await;
+        publish(&conn, "rs-test.work", &["x", "y"]).await;
+        // reject both, so they dead-letter with x-death
+        let ch = conn.create_channel().await.unwrap();
+        while let Some(m) = ch
+            .basic_get("rs-test.work".into(), lapin::options::BasicGetOptions::default())
+            .await
+            .unwrap()
+        {
+            ch.basic_nack(m.delivery.delivery_tag, BasicNackOptions { multiple: false, requeue: false })
+                .await
+                .unwrap();
+        }
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        assert_eq!(depth(&conn, "rs-test.dlq").await, 2);
+        let input = TransferInput {
+            vhost: "/".into(),
+            queue: "rs-test.dlq".into(),
+            target: TransferTarget::Origin,
+            select: None,
+            limit: None,
+        };
+        let summary = transfer(&target(), input, CancelToken::default(), |_, _| {}).await.unwrap();
+        assert_eq!(summary.done, 2);
+        assert_eq!(depth(&conn, "rs-test.dlq").await, 0);
+        assert_eq!(depth(&conn, "rs-test.work").await, 2);
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn amqp_live_reads_a_stream_from_an_offset() {
+        let first = read_stream(&target(), "orders", "orders.audit", StreamOffset::First, 5, 1000, CancelToken::default())
+            .await
+            .unwrap();
+        assert_eq!(first.len(), 5);
+        assert_eq!(first[0]["offset"], 0);
+        let later = read_stream(&target(), "orders", "orders.audit", StreamOffset::Offset { value: 100 }, 3, 1000, CancelToken::default())
+            .await
+            .unwrap();
+        assert_eq!(later[0]["offset"], 100);
+    }
+}
