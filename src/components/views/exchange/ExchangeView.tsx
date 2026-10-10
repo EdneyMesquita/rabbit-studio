@@ -8,7 +8,6 @@ import { DataTable, type Column } from "@/components/data/DataTable";
 import {
   EmptyState,
   ErrorState,
-  KeyValues,
   Loading,
   Metrics,
   SectionHeader,
@@ -16,7 +15,6 @@ import {
   Tag,
   ViewTitle,
   ViewToolbar,
-  Dash,
 } from "@/components/data/parts";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -204,15 +202,8 @@ function Body({
             <TimeSeriesChart series={series} height={140} format={rate} label="Publish in and out rates, last 10 minutes" />
           </div>
           <SectionHeader>Properties</SectionHeader>
-          <KeyValues
-            rows={[
-              ["vhost", vhost],
-              ["type", e.type],
-              ["durable", String(e.durable)],
-              ["auto_delete", String(e.auto_delete)],
-              ["internal", String(e.internal)],
-              ["policy", e.policy ?? <Dash />],
-            ]}
+          <TypedTree
+            value={{ vhost, type: e.type, durable: e.durable, auto_delete: e.auto_delete, internal: e.internal, policy: e.policy ?? null }}
           />
           <SectionHeader>Arguments</SectionHeader>
           <div className="px-3 py-2">
