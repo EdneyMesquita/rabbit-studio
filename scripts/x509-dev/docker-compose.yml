@@ -1,0 +1,26 @@
+services:
+  rabbit-x509:
+    image: rabbitmq:4.2-management
+    container_name: rabbit-studio-x509
+    hostname: rabbit-x509
+    ports:
+      - "127.0.0.1:5678:5671"
+    volumes:
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./ca.pem:/etc/rabbitmq/certs/ca.pem:ro
+      - ./server.pem:/etc/rabbitmq/certs/server.pem:ro
+      - ./server.key:/etc/rabbitmq/certs/server.key:ro
+
+  proxy:
+    image: nginx:1.27-alpine
+    container_name: rabbit-studio-x509-proxy
+    depends_on:
+      - rabbit-x509
+    ports:
+      - "127.0.0.1:15678:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ca.pem:/etc/nginx/certs/ca.pem:ro
+      - ./server.pem:/etc/nginx/certs/server.pem:ro
+      - ./server.key:/etc/nginx/certs/server.key:ro
