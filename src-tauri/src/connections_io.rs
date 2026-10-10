@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    AmqpOptions, ConnectionAdvancedOptions, ConnectionProfile, ConnectionProfileInput,
-    ConnectionSource, Environment, SshTunnelOptions, TlsOptions,
+    AmqpOptions, AuthMethod, ConnectionAdvancedOptions, ConnectionProfile, ConnectionProfileInput,
+    ConnectionSource, Environment, OAuth2Options, SshTunnelOptions, TlsOptions,
 };
 use crate::secrets::{SecretKind, SecretStore};
 
@@ -27,6 +27,12 @@ struct FileEntry {
     #[serde(default)]
     environment: Environment,
     source: ConnectionSource,
+    #[serde(default)]
+    auth: AuthMethod,
+    #[serde(default)]
+    oauth2: OAuth2Options,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    oauth2_client_secret: Option<String>,
     #[serde(default)]
     username: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -76,6 +82,16 @@ pub fn export_connections(
             color: p.color.clone(),
             environment: p.environment,
             source: p.source.clone(),
+            auth: p.auth,
+            oauth2: OAuth2Options {
+                has_secret: false,
+                ..p.oauth2.clone()
+            },
+            oauth2_client_secret: if p.oauth2.has_secret {
+                secret(&p.id, SecretKind::OAuth2ClientSecret)?
+            } else {
+                None
+            },
             username: p.username.clone(),
             password: if p.has_password {
                 secret(&p.id, SecretKind::Password)?
@@ -158,6 +174,9 @@ fn parse_own(index: usize, raw: serde_json::Value) -> Result<ParsedImportEntry, 
             color: entry.color,
             environment: entry.environment,
             source: entry.source,
+            auth: entry.auth,
+            oauth2: entry.oauth2,
+            oauth2_client_secret: entry.oauth2_client_secret,
             username: entry.username,
             password: entry.password,
             tls: entry.tls,
@@ -182,6 +201,8 @@ mod tests {
             name: name.to_string(),
             color: Some("#4FA25A".to_string()),
             environment: Environment::Production,
+            auth: AuthMethod::Password,
+            oauth2: OAuth2Options::default(),
             source: ConnectionSource::Manual {
                 host: "mq.internal".to_string(),
                 port: 15672,

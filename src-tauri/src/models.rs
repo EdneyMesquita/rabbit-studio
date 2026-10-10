@@ -83,6 +83,34 @@ pub struct SshTunnelOptions {
     pub private_key_has_passphrase: bool,
 }
 
+/// How the app logs in to the management API (and AMQP).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AuthMethod {
+    /// A user and password (basic auth; AMQP PLAIN).
+    #[default]
+    Password,
+    /// OAuth 2 client credentials: the app gets a token from the issuer and
+    /// sends it as a bearer token (and as the AMQP password).
+    Oauth2,
+}
+
+/// The OAuth 2 client the app logs in as. The secret is in the secret store.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OAuth2Options {
+    /// The issuer (its `/.well-known/openid-configuration` names the token
+    /// endpoint), or the token endpoint itself.
+    pub issuer: String,
+    pub client_id: String,
+    /// Scopes to ask for; the issuer's defaults when absent.
+    #[serde(default)]
+    pub scope: Option<String>,
+    /// Whether a client secret is held in the secret store.
+    #[serde(default)]
+    pub has_secret: bool,
+}
+
 /// The environment a connection belongs to: groups the explorer and sets
 /// how careful the app is with it.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -125,6 +153,10 @@ pub struct ConnectionProfile {
     #[serde(default)]
     pub environment: Environment,
     pub source: ConnectionSource,
+    #[serde(default)]
+    pub auth: AuthMethod,
+    #[serde(default)]
+    pub oauth2: OAuth2Options,
     pub username: Option<String>,
     /// Whether a password for `username` is held in the secret store.
     pub has_password: bool,
@@ -151,6 +183,12 @@ pub struct ConnectionProfileInput {
     #[serde(default)]
     pub environment: Environment,
     pub source: ConnectionSource,
+    #[serde(default)]
+    pub auth: AuthMethod,
+    #[serde(default)]
+    pub oauth2: OAuth2Options,
+    #[serde(default)]
+    pub oauth2_client_secret: Option<String>,
     pub username: Option<String>,
     pub password: Option<String>,
     #[serde(default)]

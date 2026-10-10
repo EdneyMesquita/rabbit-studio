@@ -76,6 +76,21 @@ async fn materialize_profile(
             .is_ok_and(|saved| saved.has_password)
     };
 
+    let mut oauth2 = input.oauth2;
+    if let Some(secret) = input.oauth2_client_secret.as_deref().filter(|s| !s.is_empty()) {
+        state
+            .secret_store
+            .set(&id, SecretKind::OAuth2ClientSecret, secret)
+            .map_err(AppError::Secret)?;
+        oauth2.has_secret = true;
+    } else {
+        // Blank on an edit keeps the saved secret.
+        oauth2.has_secret |= state
+            .connection_store
+            .get(&id)
+            .is_ok_and(|saved| saved.oauth2.has_secret);
+    }
+
     let mut ssh_tunnel = input.ssh_tunnel;
     if let Some(ssh) = &mut ssh_tunnel {
         if let Some(password) = &input.ssh_password {
@@ -105,6 +120,8 @@ async fn materialize_profile(
         color: input.color,
         environment: input.environment,
         source,
+        auth: input.auth,
+        oauth2,
         username,
         has_password,
         tls: input.tls,
@@ -379,7 +396,7 @@ async fn test_profile(
             RabbitSession::connect(&profile, state.secret_store.as_ref(), &state.known_hosts).await;
         let tested = match tested {
             Ok((session, info)) => {
-                let amqp_reachable = match &session.amqp {
+                let amqp_reachable = match session.amqp_target().await.ok().flatten() {
                     Some(t) => Some(amqp::reachable(&t.host, t.port).await),
                     None => None,
                 };
@@ -455,7 +472,7 @@ pub async fn connect(state: State<'_, AppState>, id: String) -> AppResult<Connec
         user: info.user,
         tags: info.tags,
         read_only: session.read_only,
-        amqp: session.amqp.is_some(),
+        amqp: session.has_amqp(),
     };
     state
         .sessions
@@ -610,8 +627,8 @@ pub async fn cancel_task(state: State<'_, AppState>, execution_id: String) -> Ap
     Ok(())
 }
 
-fn amqp_target(session: &RabbitSession) -> AppResult<crate::rmq::AmqpTarget> {
-    session.amqp.clone().ok_or_else(|| {
+async fn amqp_target(session: &RabbitSession) -> AppResult<crate::rmq::AmqpTarget> {
+    session.amqp_target().await?.ok_or_else(|| {
         AppError::InvalidInput(
             "This needs AMQP access, which is off for this connection. Turn it on in the \
              connection's Advanced settings."
@@ -636,7 +653,7 @@ pub async fn transfer_messages<R: Runtime>(
             session.name
         )));
     }
-    let target = amqp_target(&session)?;
+    let target = amqp_target(&session).await?;
     let token = track(&state, &execution_id);
     let what = format!("{:?} from {} in {}", input.target, input.queue, input.vhost);
     let id = execution_id.clone();
@@ -678,7 +695,7 @@ pub async fn read_stream(
     truncate: Option<u32>,
 ) -> AppResult<Vec<serde_json::Value>> {
     let session = session(&state, &session_id).await?;
-    let target = amqp_target(&session)?;
+    let target = amqp_target(&session).await?;
     let token = track(&state, &execution_id);
     let result = amqp::read_stream(
         &target,
@@ -838,6 +855,9 @@ mod tests {
             name: name.to_string(),
             color: None,
             environment: Default::default(),
+            auth: Default::default(),
+            oauth2: Default::default(),
+            oauth2_client_secret: None,
             source: ConnectionSource::Uri {
                 uri: "http://127.0.0.1:1".to_string(),
             },

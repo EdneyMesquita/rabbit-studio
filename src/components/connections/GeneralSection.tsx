@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useConnectionsStore } from "@/store/connectionsStore";
 import { looksLikeUrl, urlUser } from "@/lib/connectionUri";
-import { ENVIRONMENTS, type ConnectionSource, type Environment } from "@/types/connection";
+import { ENVIRONMENTS, type AuthMethod, type ConnectionSource, type Environment } from "@/types/connection";
 import { ColorSwatches } from "./ColorSwatches";
 import { DATA_FIELD, KEEP_SAVED, type ConnectionSectionProps } from "./connectionFormTypes";
 import { Field } from "./Field";
@@ -121,38 +121,116 @@ export function GeneralSection({ input, update, editing, autoColor }: GeneralSec
         </>
       )}
 
-      <FieldRow>
-        <Field label="Username" htmlFor="conn-user">
-          <Input
-            id="conn-user"
-            className={DATA_FIELD}
-            autoComplete="off"
-            spellCheck={false}
-            value={input.username ?? ""}
-            onChange={(e) => update("username", e.target.value || null)}
-            placeholder={source.kind === "uri" ? "From the URL, else guest" : "guest"}
-          />
-        </Field>
-        <Field
-          label="Password"
-          htmlFor="conn-password"
+      <Field
+        label="Authentication"
+        help={
+          input.auth === "oauth2"
+            ? "The app gets a token from the issuer with these client credentials and renews it before it expires; RabbitMQ needs its OAuth 2 plugin."
+            : "Client certificates go in TLS: the management API itself logs in with a password or an OAuth 2 token, not a certificate."
+        }
+      >
+        <SegmentedControl<AuthMethod>
+          aria-label="Authentication"
+          value={input.auth}
+          onChange={(auth) => update("auth", auth)}
+          options={[
+            { value: "password", label: "Password" },
+            { value: "oauth2", label: "OAuth 2" },
+          ]}
+        />
+      </Field>
+
+      {input.auth === "oauth2" ? (
+        <>
+          <Field label="Issuer" htmlFor="conn-issuer">
+            <Input
+              id="conn-issuer"
+              className={DATA_FIELD}
+              autoComplete="off"
+              spellCheck={false}
+              value={input.oauth2.issuer}
+              onChange={(e) => update("oauth2", { ...input.oauth2, issuer: e.target.value })}
+              placeholder="https://keycloak.internal/realms/ops"
+            />
+          </Field>
+          <FieldRow>
+            <Field label="Client ID" htmlFor="conn-client-id">
+              <Input
+                id="conn-client-id"
+                className={DATA_FIELD}
+                autoComplete="off"
+                spellCheck={false}
+                value={input.oauth2.clientId}
+                onChange={(e) => update("oauth2", { ...input.oauth2, clientId: e.target.value })}
+                placeholder="rabbit-studio"
+              />
+            </Field>
+            <Field
+              label="Client secret"
+              htmlFor="conn-client-secret"
           help={
             <>
               <Lock />
               {keychain ? "Saved in the system keychain, never in the connection file" : "Saved encrypted, never in the connection file"}
             </>
           }
-        >
-          <Input
-            id="conn-password"
-            type="password"
-            autoComplete="new-password"
-            value={input.password ?? ""}
-            onChange={(e) => update("password", e.target.value || null)}
-            placeholder={editing?.hasPassword ? KEEP_SAVED : source.kind === "uri" ? "From the URL" : "Optional"}
-          />
-        </Field>
-      </FieldRow>
+            >
+              <Input
+                id="conn-client-secret"
+                type="password"
+                autoComplete="new-password"
+                value={input.oauth2ClientSecret ?? ""}
+                onChange={(e) => update("oauth2ClientSecret", e.target.value || null)}
+                placeholder={editing?.oauth2?.hasSecret ? KEEP_SAVED : ""}
+              />
+            </Field>
+          </FieldRow>
+          <Field label="Scope" htmlFor="conn-scope" help="Optional: the issuer's defaults when blank.">
+            <Input
+              id="conn-scope"
+              className={DATA_FIELD}
+              autoComplete="off"
+              spellCheck={false}
+              value={input.oauth2.scope ?? ""}
+              onChange={(e) => update("oauth2", { ...input.oauth2, scope: e.target.value || null })}
+              placeholder="rabbitmq.tag:administrator"
+            />
+          </Field>
+        </>
+      ) : (
+      <FieldRow>
+          <Field label="Username" htmlFor="conn-user">
+            <Input
+              id="conn-user"
+              className={DATA_FIELD}
+              autoComplete="off"
+              spellCheck={false}
+              value={input.username ?? ""}
+              onChange={(e) => update("username", e.target.value || null)}
+              placeholder={source.kind === "uri" ? "From the URL, else guest" : "guest"}
+            />
+          </Field>
+          <Field
+            label="Password"
+            htmlFor="conn-password"
+            help={
+              <>
+                <Lock />
+                {keychain ? "Saved in the system keychain, never in the connection file" : "Saved encrypted, never in the connection file"}
+              </>
+            }
+          >
+            <Input
+              id="conn-password"
+              type="password"
+              autoComplete="new-password"
+              value={input.password ?? ""}
+              onChange={(e) => update("password", e.target.value || null)}
+              placeholder={editing?.hasPassword ? KEEP_SAVED : source.kind === "uri" ? "From the URL" : "Optional"}
+            />
+          </Field>
+        </FieldRow>
+      )}
     </>
   );
 }

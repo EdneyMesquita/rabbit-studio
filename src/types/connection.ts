@@ -33,6 +33,22 @@ export interface SshTunnelOptions {
   privateKeyHasPassphrase: boolean;
 }
 
+/** How the app logs in: a user and password, or OAuth 2 client credentials. */
+export type AuthMethod = "password" | "oauth2";
+
+export interface OAuth2Options {
+  /** The issuer (discovery names its token endpoint), or the token endpoint. */
+  issuer: string;
+  clientId: string;
+  scope: string | null;
+  /** A client secret is saved in the keychain. */
+  hasSecret: boolean;
+}
+
+export function emptyOAuth2Options(): OAuth2Options {
+  return { issuer: "", clientId: "", scope: null, hasSecret: false };
+}
+
 export type Environment = "production" | "staging" | "development" | "test";
 
 export const ENVIRONMENTS: { id: Environment; label: string }[] = [
@@ -60,6 +76,8 @@ export interface ConnectionProfile {
   color?: string | null;
   environment: Environment;
   source: ConnectionSource;
+  auth?: AuthMethod;
+  oauth2?: OAuth2Options;
   username: string | null;
   hasPassword: boolean;
   tls: TlsOptions;
@@ -76,6 +94,10 @@ export interface ConnectionProfileInput {
   color?: string | null;
   environment: Environment;
   source: ConnectionSource;
+  auth: AuthMethod;
+  oauth2: OAuth2Options;
+  /** Blank keeps the saved one. */
+  oauth2ClientSecret: string | null;
   username: string | null;
   password: string | null;
   tls: TlsOptions;
@@ -180,6 +202,9 @@ export function newProfileInput(): ConnectionProfileInput {
     color: null,
     environment: "development",
     source: { kind: "manual", host: "localhost", port: 15672 },
+    auth: "password",
+    oauth2: emptyOAuth2Options(),
+    oauth2ClientSecret: null,
     username: "guest",
     password: null,
     tls: emptyTlsOptions(),
@@ -202,6 +227,9 @@ export function profileToInput(profile: ConnectionProfile): ConnectionProfileInp
     color: profile.color ?? null,
     environment: profile.environment ?? "development",
     source: profile.source,
+    auth: profile.auth ?? "password",
+    oauth2: { ...emptyOAuth2Options(), ...profile.oauth2 },
+    oauth2ClientSecret: null,
     username: profile.username,
     password: null,
     tls: { ...emptyTlsOptions(), ...profile.tls },

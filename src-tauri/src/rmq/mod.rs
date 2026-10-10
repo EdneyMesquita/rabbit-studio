@@ -3,6 +3,7 @@
 
 pub mod amqp;
 pub mod message;
+pub mod oauth;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -12,7 +13,7 @@ use serde_json::Value;
 use tokio::sync::Mutex;
 
 use crate::error::{AppError, AppResult};
-use crate::models::{ConnectionProfile, SshAuthMethod, DEFAULT_MGMT_PORT};
+use crate::models::{AuthMethod, ConnectionProfile, SshAuthMethod, DEFAULT_MGMT_PORT};
 use crate::secrets::{SecretKind, SecretStore};
 use crate::ssh_tunnel::{self, KnownHosts, SshTunnel, SshTunnelAuth, SshTunnelConfig};
 
@@ -63,8 +64,11 @@ pub struct RabbitSession {
     api: String,
     user: String,
     password: Option<String>,
+    /// Set when the connection logs in with OAuth 2: the token replaces the
+    /// password, as a bearer token and as the AMQP password.
+    oauth: Option<oauth::OAuthClient>,
     pub read_only: bool,
-    pub amqp: Option<AmqpTarget>,
+    amqp: Option<AmqpTarget>,
     tunnels: Mutex<Vec<SshTunnel>>,
 }
 
@@ -98,7 +102,31 @@ impl RabbitSession {
         secrets: &dyn SecretStore,
         known_hosts: &Arc<KnownHosts>,
     ) -> AppResult<(Self, ServerInfo)> {
-        let password = if profile.has_password {
+        let oauth = if profile.auth == AuthMethod::Oauth2 {
+            let secret = if profile.oauth2.has_secret {
+                secrets
+                    .get(&profile.id, SecretKind::OAuth2ClientSecret)
+                    .map_err(AppError::Secret)?
+                    .ok_or_else(|| {
+                        AppError::PasswordMissing(
+                            "The saved OAuth 2 client secret is missing from the system keychain. \
+                             Edit the connection and enter it again."
+                                .to_string(),
+                        )
+                    })?
+            } else {
+                String::new()
+            };
+            Some(oauth::OAuthClient::new(
+                &profile.oauth2.issuer,
+                &profile.oauth2.client_id,
+                secret,
+                profile.oauth2.scope.clone(),
+            )?)
+        } else {
+            None
+        };
+        let password = if oauth.is_none() && profile.has_password {
             let saved = secrets
                 .get(&profile.id, SecretKind::Password)
                 .map_err(AppError::Secret)?;
@@ -178,6 +206,7 @@ impl RabbitSession {
             api,
             user: user.clone(),
             password: password.clone(),
+            oauth,
             read_only: profile.advanced.read_only,
             amqp: amqp_addr.map(|(host, port)| AmqpTarget {
                 host,
@@ -248,10 +277,11 @@ impl RabbitSession {
             )));
         }
         let url = format!("{}/{path}", self.api);
-        let mut req = self
-            .http
-            .request(method, &url)
-            .basic_auth(&self.user, self.password.as_deref());
+        let mut req = self.http.request(method, &url);
+        req = match &self.oauth {
+            Some(oauth) => req.bearer_auth(oauth.token().await?),
+            None => req.basic_auth(&self.user, self.password.as_deref()),
+        };
         if let Some(body) = body {
             req = req.json(body);
         }
@@ -271,6 +301,24 @@ impl RabbitSession {
             return Ok(Value::Null);
         }
         serde_json::from_slice(&bytes).map_err(|e| AppError::Http(format!("not JSON: {e}")))
+    }
+
+    /// Whether AMQP access is on for this connection.
+    pub fn has_amqp(&self) -> bool {
+        self.amqp.is_some()
+    }
+
+    /// Where AMQP operations connect, with credentials good right now (a
+    /// fresh token under OAuth 2, which RabbitMQ takes as the password).
+    pub async fn amqp_target(&self) -> AppResult<Option<AmqpTarget>> {
+        let Some(mut target) = self.amqp.clone() else {
+            return Ok(None);
+        };
+        if let Some(oauth) = &self.oauth {
+            target.user = "rabbit-studio".to_string();
+            target.password = oauth.token().await?;
+        }
+        Ok(Some(target))
     }
 
     pub async fn shutdown(&self) {

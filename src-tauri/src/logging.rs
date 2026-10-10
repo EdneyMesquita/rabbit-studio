@@ -302,6 +302,8 @@ mod tests {
             color: None,
             source,
             environment: Default::default(),
+            auth: Default::default(),
+            oauth2: Default::default(),
             username: None,
             has_password: false,
             tls: TlsOptions::default(),

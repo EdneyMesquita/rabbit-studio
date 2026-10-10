@@ -16,13 +16,15 @@ pub enum SecretKind {
     Password,
     SshPassword,
     SshKeyPassphrase,
+    OAuth2ClientSecret,
 }
 
 impl SecretKind {
-    pub(crate) const ALL: [SecretKind; 3] = [
+    pub(crate) const ALL: [SecretKind; 4] = [
         SecretKind::Password,
         SecretKind::SshPassword,
         SecretKind::SshKeyPassphrase,
+        SecretKind::OAuth2ClientSecret,
     ];
 
     fn suffix(self) -> &'static str {
@@ -30,6 +32,7 @@ impl SecretKind {
             SecretKind::Password => "password",
             SecretKind::SshPassword => "ssh-password",
             SecretKind::SshKeyPassphrase => "ssh-key-passphrase",
+            SecretKind::OAuth2ClientSecret => "oauth2-client-secret",
         }
     }
 }
