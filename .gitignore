@@ -28,3 +28,4 @@ dist-ssr
 src-tauri/target
 src-tauri/target-bench
 src-tauri/gen
+.claude/scheduled_tasks.lock
