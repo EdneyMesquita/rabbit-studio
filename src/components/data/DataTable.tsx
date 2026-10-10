@@ -7,6 +7,8 @@ import type { MenuEntry } from "@/components/common/ActionMenu";
 import { useVirtualRows } from "@/components/grid/useVirtualRows";
 
 const HEADER_HEIGHT = 30;
+/** The least a column without a width gets (a name, a description). */
+const FLEX_MIN = 200;
 
 export interface Column<T> {
   id: string;
@@ -56,6 +58,9 @@ interface DataTableProps<T> {
   empty?: ReactNode;
   /** The faint # column at the left (DESIGN.md: every data grid has one). */
   rowNumbers?: boolean;
+  /** Selects the first row once the rows arrive, so the inspector beside
+   * the table opens on something (as the mockup's lists do). */
+  selectFirst?: boolean;
   "aria-label": string;
   className?: string;
   /** A row key to scroll to and select once it is in the rows. */
@@ -91,6 +96,7 @@ export function DataTable<T>({
   rowTone,
   empty,
   rowNumbers = true,
+  selectFirst = false,
   className,
   reveal,
   ...aria
@@ -111,6 +117,15 @@ export function DataTable<T>({
     return sort.desc ? out.reverse() : out;
   }, [rows, columns, sort, manualSort]);
 
+  // A fixed table hands the columns without a width what the sized ones
+  // leave - which can be nothing. Each keeps at least this much: past that
+  // the table scrolls sideways instead of hiding a name column.
+  const minTableWidth = useMemo(
+    () =>
+      columns.reduce((sum, c) => sum + (typeof c.width === "number" ? c.width : c.width == null ? FLEX_MIN : 120), 0) +
+      (rowNumbers ? 44 : 0),
+    [columns, rowNumbers],
+  );
   const scroller = useRef<HTMLDivElement>(null);
   const virtual = useVirtualRows(scroller, sorted.length, HEADER_HEIGHT);
   const anchor = useRef<string | null>(null);
@@ -147,6 +162,14 @@ export function DataTable<T>({
     },
     [onSelectionChange, multi, sel, indexOf, sorted, rowKey],
   );
+
+  const selectedFirst = useRef(false);
+  useEffect(() => {
+    if (!selectFirst || selectedFirst.current || reveal || !sorted.length || !onSelectionChange) return;
+    selectedFirst.current = true;
+    if (sel.size === 0) choose(rowKey(sorted[0]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectFirst, sorted.length]);
 
   // Selecting by key from outside (a focus passed with the tab).
   useEffect(() => {
@@ -205,7 +228,8 @@ export function DataTable<T>({
         aria-label={aria["aria-label"]}
         aria-rowcount={sorted.length + 1}
         aria-multiselectable={multi || undefined}
-        className="w-full min-w-max table-fixed border-separate border-spacing-0 font-data"
+        className="w-full table-fixed border-separate border-spacing-0 font-data"
+        style={{ minWidth: minTableWidth }}
       >
         <colgroup>
           {rowNumbers && <col style={{ width: 44 }} />}

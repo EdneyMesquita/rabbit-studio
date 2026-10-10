@@ -143,6 +143,7 @@ export default function LimitsSection({ cid, shown }: SectionProps) {
         <Loading />
       ) : (
         <DataTable
+selectFirst
           aria-label="Limits"
           rows={rows}
           columns={columns}

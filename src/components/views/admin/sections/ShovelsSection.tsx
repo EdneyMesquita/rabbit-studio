@@ -195,6 +195,7 @@ export default function ShovelsSection({ cid, tab, shown }: SectionProps) {
         <PluginOff plugin="shovel" extra="rabbitmq_shovel rabbitmq_shovel_management" />
       ) : (
         <DataTable
+selectFirst
           aria-label="Shovels"
           rows={rows}
           columns={columns}

@@ -244,6 +244,7 @@ export default function FederationSection({ cid, tab, shown }: SectionProps) {
         <PluginOff plugin="federation" extra="rabbitmq_federation rabbitmq_federation_management" />
       ) : show === "upstreams" ? (
         <DataTable
+selectFirst
           aria-label="Federation upstreams"
           rows={upstreams}
           columns={upstreamColumns}

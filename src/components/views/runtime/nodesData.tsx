@@ -121,6 +121,7 @@ export function NodeTable({
   const columns = useNodeColumns();
   return (
     <DataTable
+selectFirst
       aria-label="Nodes"
       rows={rows}
       columns={columns}

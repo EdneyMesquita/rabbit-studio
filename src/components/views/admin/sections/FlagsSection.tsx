@@ -148,6 +148,7 @@ export default function FlagsSection({ cid, shown }: SectionProps) {
         <Loading />
       ) : show === "flags" ? (
         <DataTable
+selectFirst
           aria-label="Feature flags"
           rows={flags}
           columns={flagColumns}

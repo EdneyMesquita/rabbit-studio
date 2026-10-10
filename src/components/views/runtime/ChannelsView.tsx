@@ -137,6 +137,7 @@ export default function ChannelsView({ tab, shown }: ViewProps) {
             <Loading />
           ) : (
             <DataTable
+selectFirst
               aria-label="Channels"
               rows={rows}
               columns={columns}

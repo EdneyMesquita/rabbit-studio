@@ -202,6 +202,7 @@ export default function ConnectionsView({ tab, shown }: ViewProps) {
             <Loading />
           ) : (
             <DataTable
+selectFirst
               aria-label="Connections"
               rows={rows}
               columns={columns}

@@ -123,6 +123,7 @@ export default function PoliciesSection({ cid, tab, shown }: SectionProps) {
         <Loading />
       ) : (
         <DataTable
+selectFirst
           aria-label={operator ? "Operator policies" : "Policies"}
           rows={rows}
           columns={columns}

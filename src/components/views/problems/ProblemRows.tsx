@@ -43,8 +43,8 @@ export const ProblemList = memo(function ProblemList({ connectionId, problems }:
     <div>
       {problems.map((p) => (
         <RowButton key={p.id} problem={p} onOpen={() => openProblem(connectionId, p.target)}>
-          <span className="truncate font-mono">{p.object}</span>
-          <span className="truncate">{p.detail}</span>
+          <span className="max-w-[70%] shrink-0 truncate font-mono">{p.object}</span>
+          <span className="min-w-0 truncate">{p.detail}</span>
         </RowButton>
       ))}
     </div>
@@ -59,8 +59,8 @@ export const ClusterProblemList = memo(function ClusterProblemList({ items }: { 
         <RowButton key={`${c.connectionId}:${c.problem.id}`} problem={c.problem} onOpen={() => openProblem(c.connectionId, c.problem.target)}>
           <ConnectionChip name={c.cluster} color={c.color} size="dot" />
           <span className="shrink-0">{c.cluster} ·</span>
-          <span className="truncate font-mono">{c.problem.object}</span>
-          <span className="truncate">· {c.problem.detail}</span>
+          <span className="max-w-[60%] shrink-0 truncate font-mono">{c.problem.object}</span>
+          <span className="min-w-0 truncate">· {c.problem.detail}</span>
         </RowButton>
       ))}
     </div>

@@ -163,6 +163,7 @@ export default function ExchangesView({ tab, shown }: ViewProps) {
             <Loading />
           ) : (
             <DataTable
+selectFirst
               aria-label="Exchanges"
               rows={visible}
               columns={columns}

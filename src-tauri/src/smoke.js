@@ -90,7 +90,7 @@
     await shot("newconn");
     key("Escape");
     await sleep(800);
-    tree("orders.ttl", { exact: false });
+    tree("orders.capped", { exact: false });
     await sleep(3500);
     button("Purge");
     await sleep(2000);

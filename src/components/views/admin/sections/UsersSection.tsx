@@ -205,6 +205,7 @@ export default function UsersSection({ cid, tab, shown }: SectionProps) {
         <Loading />
       ) : (
         <DataTable
+selectFirst
           aria-label="Users"
           rows={rows}
           columns={columns}

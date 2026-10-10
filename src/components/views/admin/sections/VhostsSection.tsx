@@ -99,7 +99,7 @@ export default function VhostsSection({ cid, tab, shown }: SectionProps) {
   const columns = useMemo<Column<VhostRow>[]>(
     () => [
       { id: "name", header: "name", width: 170, cell: (r) => r.name, sortValue: (r) => r.name },
-      { id: "description", header: "description", width: 240, mono: false, cell: (r) => r.v.description ?? r.v.metadata?.description ?? "", sortValue: (r) => r.v.description },
+      { id: "description", header: "description", width: 240, mono: false, cell: (r) => r.v.description || r.v.metadata?.description || <Dash />, sortValue: (r) => r.v.description },
       {
         id: "tags",
         header: "tags",
@@ -191,6 +191,7 @@ export default function VhostsSection({ cid, tab, shown }: SectionProps) {
         <Loading />
       ) : (
         <DataTable
+selectFirst
           aria-label="Virtual hosts"
           rows={rows}
           columns={columns}

@@ -18,7 +18,7 @@ export function useGuard(cid: string, objectName: string) {
     <div className="mt-3 rounded-md bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-2.5">
       <div className="mb-2 flex flex-wrap items-center gap-1.5 text-sm text-fg-2">
         <ConnectionChip name={profile!.name} color={connectionColor(profile!.id, profile!.color)} />
-        <b className="font-medium text-fg">{profile!.name}</b> is guarded. Type
+        <b className="font-medium text-fg">{profile!.name}</b> {profile!.environment === "production" ? "is production" : "is guarded"}. Type
         <b className="font-mono text-[12px] font-medium text-fg">{objectName}</b> to confirm.
       </div>
       <Input
