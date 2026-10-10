@@ -14,6 +14,14 @@
 | Polling while a tab or the window is hidden | none | none (useLive `enabled`, `visibilitychange`) |
 | Main-thread long tasks during live refresh | none | 0 in 69 s |
 
+External reference - the sibling apps measured the same way (release
+builds, idle window, 8 s after launch, CPU over the next 30 s):
+
+| App | Idle CPU (one core) | PSS, all processes |
+|---|---|---|
+| Postgres Studio | 0.17 % | 249 MB |
+| Rabbit Studio | 0.03 % | 252 MB |
+
 All measured with scripts in this repo: `scripts/measure-live.sh` (CPU,
 memory), `scripts/bench.mjs` (calls), the `startup` smoke mode (page ready).
 
