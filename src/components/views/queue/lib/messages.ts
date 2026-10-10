@@ -21,7 +21,7 @@ export interface Row {
 
 /** Dead-letter queues by name: what most setups call them. */
 export function isDlqName(name: string): boolean {
-  return /(\.|-|_)(dlq|dead|dlx)$|dead[-_.]?letter/i.test(name);
+  return /(\.|-|_)(dlq|dead)$|dead[-_.]?letter/i.test(name);
 }
 
 /** The management API answers `[]` for no properties. */
