@@ -127,6 +127,8 @@ fn setup<R: tauri::Runtime>(app: &mut tauri::App<R>) -> Result<(), Box<dyn std::
             }
         });
     }
+    #[cfg(debug_assertions)]
+    smoke(app);
     let state =
         AppState::init(&config_dir).map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
     app.manage(state);
@@ -134,6 +136,24 @@ fn setup<R: tauri::Runtime>(app: &mut tauri::App<R>) -> Result<(), Box<dyn std::
         .map_err(|e| -> Box<dyn std::error::Error> { e.to_string().into() })?;
     app.manage(layout);
     Ok(())
+}
+
+/// Debug builds: with `RABBIT_STUDIO_SMOKE=<file>`, runs `smoke.js` in the
+/// window once it has loaded - the real IPC, end to end - and the script
+/// writes what it saw to `<file>`.
+#[cfg(debug_assertions)]
+fn smoke<R: tauri::Runtime>(app: &tauri::App<R>) {
+    let Ok(out) = std::env::var("RABBIT_STUDIO_SMOKE") else {
+        return;
+    };
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+    let js = include_str!("smoke.js").replace("__OUT__", &out.replace('\\', "\\\\"));
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(4));
+        let _ = window.eval(&js);
+    });
 }
 
 /// What the plugin keeps between runs: not visibility (the window starts

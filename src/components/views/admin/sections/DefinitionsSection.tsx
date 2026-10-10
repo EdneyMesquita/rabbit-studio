@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download, FileJson, Upload } from "lucide-react";
+import { Copy, Download, FileJson, Upload } from "lucide-react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
 import { Notice, ViewTitle, ViewToolbar } from "@/components/data/parts";
@@ -10,6 +10,8 @@ import { errorText, rabbit } from "@/lib/rabbit/client";
 import { confirmDestructive, isReadOnly } from "@/lib/rabbit/guard";
 import { int } from "@/lib/rabbit/format";
 import { api } from "@/lib/tauri";
+import { paths } from "@/lib/rabbit/paths";
+import { useConnectionsStore } from "@/store/connectionsStore";
 import { definitionCounts } from "../adminLogic";
 import { Field, READ_ONLY_REASON, useVhostNames, type SectionProps } from "../shared";
 
@@ -57,9 +59,48 @@ export default function DefinitionsSection({ cid, tab, shown }: SectionProps) {
   const readOnly = isReadOnly(cid);
   const [exportScope, setExportScope] = useState(ALL);
   const [importScope, setImportScope] = useState(ALL);
-  const [busy, setBusy] = useState<"export" | "import" | null>(null);
+  const [busy, setBusy] = useState<"export" | "import" | "copy" | null>(null);
   const [chosen, setChosen] = useState<Chosen | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const profiles = useConnectionsStore((st) => st.profiles);
+  const sessions = useConnectionsStore((st) => st.sessions);
+  // Other connected clusters that accept changes: where a topology can go.
+  const targets = profiles.filter((p) => p.id !== cid && sessions[p.id] && !p.readOnly);
+  const [copyTo, setCopyTo] = useState<string>("");
+  const [copyVhost, setCopyVhost] = useState<string>("");
+  const target = targets.find((p) => p.id === copyTo) ?? targets[0];
+  const sourceVhost = copyVhost || vhosts[0] || "";
+
+  const doCopy = async () => {
+    if (!target || !sourceVhost) return;
+    setBusy("copy");
+    try {
+      // A vhost's definitions: exchanges, queues, bindings, policies and
+      // parameters - no users, no messages.
+      const defs = await rabbit(cid).get<Record<string, unknown[]>>(paths.definitions(sourceVhost));
+      const what = ["exchanges", "queues", "bindings", "policies"]
+        .map((k) => `${int((defs[k] ?? []).length)} ${k}`)
+        .join(", ");
+      setBusy(null);
+      const ok = await confirmDestructive(target.id, {
+        title: `Copy ${sourceVhost} to ${target.name}?`,
+        message: `${what} from ${sourceVhost} on ${tab.connection?.name ?? "this cluster"} are merged into ${sourceVhost} on ${target.name} (created if missing). Objects that already exist keep their settings when they match, and are refused when they differ. Messages are not copied.`,
+        confirmLabel: "Copy topology",
+      });
+      if (!ok) return;
+      setBusy("copy");
+      const to = rabbit(target.id);
+      const existing = await to.get<{ name: string }[]>(`${paths.vhosts}?columns=name`);
+      if (!existing.some((v) => v.name === sourceVhost)) await to.put(paths.vhost(sourceVhost), {});
+      await to.post(paths.definitions(sourceVhost), defs);
+      invalidate(`${target.id}:`);
+      toast.success("Topology copied", { description: `${sourceVhost} → ${target.name}` });
+    } catch (e) {
+      toast.error("Could not copy the topology", { description: errorText(e) });
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const doExport = async () => {
     const vhost = exportScope === ALL ? null : exportScope;
@@ -181,6 +222,50 @@ export default function DefinitionsSection({ cid, tab, shown }: SectionProps) {
                 </Button>
               </div>
             </div>
+          )}
+        </Panel>
+        <Panel icon={Copy} title="Copy topology to another connection" meta="exchanges, queues, bindings and policies of one vhost">
+          {targets.length === 0 ? (
+            <p className="text-sm text-fg-3">Connect another cluster that isn't read-only to copy a vhost's topology to it.</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-3">
+                <Field label="Target" htmlFor="def-copy-to">
+                  <Select value={target?.id ?? ""} onValueChange={setCopyTo}>
+                    <SelectTrigger id="def-copy-to" className="w-56">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {targets.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Vhost" htmlFor="def-copy-vhost">
+                  <Select value={sourceVhost} onValueChange={setCopyVhost}>
+                    <SelectTrigger id="def-copy-vhost" className="w-48 font-mono text-[12px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vhosts.map((v) => (
+                        <SelectItem key={v} value={v}>
+                          {v}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+              <div>
+                <Button disabled={busy !== null || !sourceVhost} onClick={() => void doCopy()}>
+                  <Copy />
+                  {busy === "copy" ? "Copying…" : "Copy exchanges, queues, bindings and policies"}
+                </Button>
+              </div>
+            </>
           )}
         </Panel>
       </div>
