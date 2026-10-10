@@ -286,3 +286,11 @@ body {
 .animate-flash {
   animation: flash-ok 1.2s var(--ease-out-expo);
 }
+
+/* Line icons as the mockup draws them: a 1.75 stroke (lucide's 2 lands
+   between pixels at 12-14px, which WebKitGTK renders ragged). Icons given
+   their own stroke (the checkbox tick) keep it. */
+svg.lucide[stroke-width="2"] {
+  stroke-width: 1.75;
+  shape-rendering: geometricPrecision;
+}
