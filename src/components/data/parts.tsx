@@ -14,7 +14,9 @@ export function ViewToolbar({ children, className }: { children: ReactNode; clas
   return (
     <div
       className={cn(
-        "flex h-10 shrink-0 items-center gap-2 border-b border-line bg-editor px-3 text-base",
+        // A container, so what a toolbar drops as it narrows follows its own
+        // width (explorer and inspector open or not), not the window's.
+        "@container flex h-10 shrink-0 items-center gap-2 border-b border-line bg-editor px-3 text-base",
         className,
       )}
     >
@@ -31,7 +33,7 @@ export function Spacer() {
 /** A view's title in its toolbar: an icon, the object's name, a quiet kind. */
 export function ViewTitle({ icon: Icon, name, kind }: { icon?: LucideIcon; name: ReactNode; kind?: ReactNode }) {
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <div className="flex min-w-[min(9rem,40%)] items-center gap-2" title={typeof name === "string" ? name : undefined}>
       {Icon && <Icon className="size-4 shrink-0 text-fg-3" aria-hidden />}
       <span className="truncate font-mono text-[13px] font-medium text-fg">{name}</span>
       {kind && <span className="shrink-0 text-sm text-fg-3">{kind}</span>}

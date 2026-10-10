@@ -233,14 +233,14 @@ export default function QueueView({ tab, shown }: ViewProps) {
       <ViewToolbar>
         <ViewTitle icon={Inbox} name={name} />
         <Tag title="Queue type">{q.type ?? "classic"}</Tag>
-        <span className="shrink-0 font-mono text-[12px] text-fg-3 max-[1180px]:hidden" title="Virtual host">
+        <span className="shrink-0 font-mono text-[12px] text-fg-3 @max-[860px]:hidden" title="Virtual host">
           {vhost}
         </span>
-        <span className="shrink-0 max-[1180px]:hidden">
+        <span className="shrink-0 @max-[860px]:hidden">
           <StateLabel tone={st.tone}>{st.text}</StateLabel>
         </span>
         {q.policy && (
-          <Tag title="Policy" className="max-[1180px]:hidden">
+          <Tag title="Policy" className="@max-[860px]:hidden">
             {q.policy}
           </Tag>
         )}
@@ -256,7 +256,7 @@ export default function QueueView({ tab, shown }: ViewProps) {
               onClick={() => openDialog("move-messages", { connectionId: cid, vhost, name })}
             >
               <ArrowRightLeft />
-              <span className="max-[960px]:hidden">Move</span>
+              <span className="@max-[680px]:hidden">Move</span>
             </Button>
             <Button
               variant="ghost"
@@ -267,7 +267,7 @@ export default function QueueView({ tab, shown }: ViewProps) {
               onClick={() => openDialog("purge-queue", { connectionId: cid, vhost, name })}
             >
               <Eraser />
-              <span className="max-[960px]:hidden">Purge</span>
+              <span className="@max-[680px]:hidden">Purge</span>
             </Button>
           </>
         )}
@@ -280,7 +280,7 @@ export default function QueueView({ tab, shown }: ViewProps) {
           onClick={() => openDialog("delete-queue", { connectionId: cid, vhost, name, data: { tabId: tab.id } })}
         >
           <Trash2 />
-          <span className="max-[960px]:hidden">Delete</span>
+          <span className="@max-[680px]:hidden">Delete</span>
         </Button>
         <Button variant="ghost" size="icon-sm" title="Refresh" aria-label="Refresh" onClick={() => void live.refresh()}>
           <RefreshCw />

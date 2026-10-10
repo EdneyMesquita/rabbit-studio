@@ -22,7 +22,8 @@ export function hasAmqp(cid: string): boolean {
 
 export function summaryText(s: TransferSummary, verb: string): string {
   const parts = [`${s.done} ${verb}`];
-  if (s.skipped) parts.push(`${s.skipped} left in place`);
+  // `skipped` counts the messages looked past to find the chosen ones:
+  // untouched, so not news.
   if (s.failed) parts.push(`${s.failed} failed (unroutable or no x-death)`);
   if (s.missing) parts.push(`${s.missing} not found (consumed meanwhile)`);
   if (s.cancelled) parts.push("cancelled");

@@ -13,6 +13,8 @@ import { bytes, dateTime, int } from "@/lib/rabbit/format";
 import { confirmDestructive, isReadOnly } from "@/lib/rabbit/guard";
 import { paths } from "@/lib/rabbit/paths";
 import { api } from "@/lib/tauri";
+import { confirm } from "@/store/confirmStore";
+import { useConnectionsStore } from "@/store/connectionsStore";
 import { openDialog } from "@/store/dialogStore";
 import type { Message, Queue, StreamOffset, TransferTarget } from "@/types/rabbit";
 import { cn } from "@/lib/utils";
@@ -200,9 +202,21 @@ export default function MessagesPanel({
   );
 
   const replay = useCallback(
-    (rows: Row[]) =>
-      transferRows(rows, { kind: "origin" }, rows.length === 1 ? "Replayed to origin" : `Replayed ${rows.length} messages`, "replayed"),
-    [transferRows],
+    async (rows: Row[]) => {
+      // Replaying loses nothing, but on a guarded (production) connection it
+      // feeds live consumers again, so it asks first - without a typed name.
+      const profile = useConnectionsStore.getState().profiles.find((p) => p.id === cid);
+      if (profile?.typedConfirmation) {
+        const ok = await confirm({
+          title: rows.length === 1 ? "Replay this message?" : `Replay ${rows.length} messages?`,
+          message: `${rows.length === 1 ? "It is" : "They are"} published again where ${rows.length === 1 ? "it was" : "they were"} first sent (from x-death) on ${profile.name}, and taken off ${name} once the broker confirms. Live consumers will process ${rows.length === 1 ? "it" : "them"}.`,
+          confirmLabel: rows.length === 1 ? "Replay message" : `Replay ${rows.length} messages`,
+        });
+        if (!ok) return;
+      }
+      await transferRows(rows, { kind: "origin" }, rows.length === 1 ? "Replayed to origin" : `Replayed ${rows.length} messages`, "replayed");
+    },
+    [cid, name, transferRows],
   );
   const discard = useCallback(
     async (rows: Row[]) => {
