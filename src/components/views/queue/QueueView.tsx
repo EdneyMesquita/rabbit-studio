@@ -210,7 +210,7 @@ export default function QueueView({ tab, shown }: ViewProps) {
 
   const nConsumers = q.consumers ?? 0;
   // Below 760px of toolbar the segments keep their icons only (title names them).
-  const lbl = (text: ReactNode) => <span className="@max-[760px]:hidden">{text}</span>;
+  const lbl = (text: ReactNode) => <span className="@max-[900px]:hidden">{text}</span>;
   const views = [
     { value: "overview" as const, label: lbl("Overview"), icon: <Activity />, title: "Overview" },
     { value: "messages" as const, label: lbl("Messages"), icon: <Rows3 />, title: "Messages" },
@@ -256,14 +256,14 @@ export default function QueueView({ tab, shown }: ViewProps) {
       <ViewToolbar>
         <ViewTitle icon={Inbox} name={name} />
         <Tag title="Queue type">{q.type ?? "classic"}</Tag>
-        <span className="shrink-0 font-mono text-[12px] text-fg-3 @max-[860px]:hidden" title="Virtual host">
+        <span className="shrink-0 font-mono text-[12px] text-fg-3 @max-[1180px]:hidden" title="Virtual host">
           {vhost}
         </span>
-        <span className="shrink-0 @max-[860px]:hidden">
+        <span className="shrink-0 @max-[1180px]:hidden">
           <StateLabel tone={st.tone}>{st.text}</StateLabel>
         </span>
         {q.policy && (
-          <Tag title="Policy" className="@max-[860px]:hidden">
+          <Tag title="Policy" className="@max-[1180px]:hidden">
             {q.policy}
           </Tag>
         )}
@@ -279,7 +279,7 @@ export default function QueueView({ tab, shown }: ViewProps) {
               onClick={() => openDialog("move-messages", { connectionId: cid, vhost, name })}
             >
               <ArrowRightLeft />
-              <span className="@max-[680px]:hidden">Move</span>
+              <span className="@max-[1000px]:hidden">Move</span>
             </Button>
             <Button
               variant="ghost"
@@ -290,7 +290,7 @@ export default function QueueView({ tab, shown }: ViewProps) {
               onClick={() => openDialog("purge-queue", { connectionId: cid, vhost, name })}
             >
               <Eraser />
-              <span className="@max-[680px]:hidden">Purge</span>
+              <span className="@max-[1000px]:hidden">Purge</span>
             </Button>
           </>
         )}
@@ -303,7 +303,7 @@ export default function QueueView({ tab, shown }: ViewProps) {
           onClick={() => openDialog("delete-queue", { connectionId: cid, vhost, name, data: { tabId: tab.id } })}
         >
           <Trash2 />
-          <span className="@max-[680px]:hidden">Delete</span>
+          <span className="@max-[1000px]:hidden">Delete</span>
         </Button>
         <Button variant="ghost" size="icon-sm" title="Refresh" aria-label="Refresh" onClick={() => void live.refresh()}>
           <RefreshCw />

@@ -6,6 +6,98 @@
     await T.invoke("write_text_file", { path: "__OUT__", contents: JSON.stringify({ ok: true, mode: "idle" }) });
     return;
   }
+  if ("__MODE__" === "tour") {
+    // Walks the mockup's screens, one at a time: writes <out>.<n> when a
+    // screen is up, waits for <out>.go to say n (the capture is taken).
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const items = () => [...document.querySelectorAll("[role=treeitem]")];
+    const label = (e) => e.textContent.trim();
+    const tree = (text, { exact = true, within = null } = {}) => {
+      const all = items().filter((e) => (exact ? label(e) === text : label(e).startsWith(text)));
+      const el = within ? all.find((e) => e.compareDocumentPosition(within) & Node.DOCUMENT_POSITION_PRECEDING) : all[0];
+      el?.click();
+      return el;
+    };
+    const expand = (text) => {
+      const el = items().find((e) => label(e).startsWith(text) && e.getAttribute("aria-expanded") === "false");
+      el?.click();
+    };
+    const button = (text) => [...document.querySelectorAll("button")].find((b) => !b.closest(".invisible") && b.textContent.trim().startsWith(text))?.click();
+    const key = (k, opts = {}) => document.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true, ...opts }));
+    let n = 0;
+    const shot = async (name) => {
+      n++;
+      await T.invoke("write_text_file", { path: `__OUT__.${n}`, contents: name });
+      for (let i = 0; i < 120; i++) {
+        await sleep(250);
+        const go = await T.invoke("read_text_file", { path: "__OUT__.go" }).catch(() => "");
+        if (go.trim() === String(n)) return;
+      }
+    };
+    await sleep(1500);
+    document.querySelector('button[aria-label^="Connect all"]')?.click();
+    await sleep(4500);
+    tree("All clusters", { exact: false });
+    await sleep(4000);
+    await shot("global");
+    expand("Production");
+    await sleep(600);
+    expand("Dev cluster A");
+    await sleep(800);
+    tree("Overview");
+    await sleep(4000);
+    await shot("cluster");
+    expand("orders");
+    await sleep(1200);
+    items().filter((e) => label(e).startsWith("Queues"))[0]?.querySelector("span,div")?.click();
+    tree("Queues", { exact: false });
+    await sleep(4000);
+    await shot("queues");
+    expand("Queues");
+    await sleep(1500);
+    tree("orders.created", { exact: false });
+    await sleep(4000);
+    await shot("queue");
+    tree("orders.dlq", { exact: false });
+    await sleep(4500);
+    document.querySelector('tr[data-row="0"]')?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0 }));
+    await sleep(1500);
+    await shot("dlq");
+    expand("Exchanges");
+    await sleep(1500);
+    tree("orders.events", { exact: false });
+    await sleep(2500);
+    button("Publish");
+    await sleep(2500);
+    await shot("publish");
+    tree("Topology");
+    await sleep(4500);
+    await shot("topology");
+    expand("Runtime");
+    await sleep(600);
+    tree("Connections", { exact: false });
+    await sleep(4000);
+    await shot("conns");
+    expand("Admin");
+    await sleep(600);
+    tree("Virtual hosts");
+    await sleep(3500);
+    document.querySelector('tr[data-row="1"]')?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0 }));
+    await sleep(1200);
+    await shot("admin");
+    key("n", { ctrlKey: true });
+    await sleep(2000);
+    await shot("newconn");
+    key("Escape");
+    await sleep(800);
+    tree("orders.ttl", { exact: false });
+    await sleep(3500);
+    button("Purge");
+    await sleep(2000);
+    await shot("purge");
+    await T.invoke("write_text_file", { path: "__OUT__", contents: JSON.stringify({ ok: true, shots: n }) });
+    return;
+  }
   if ("__MODE__" === "load-nobeat") {
     const st = document.createElement("style");
     st.textContent = ".live-beat::after{animation:none!important}";

@@ -115,7 +115,7 @@ export interface MetricItem {
 /** The strip of headline numbers under a toolbar. */
 export function Metrics({ items }: { items: MetricItem[] }) {
   return (
-    <div className="grid shrink-0 grid-cols-[repeat(auto-fit,minmax(128px,1fr))] border-b border-line">
+    <div className="grid shrink-0 grid-cols-[repeat(auto-fit,minmax(112px,1fr))] border-b border-line">
       {items.map((m, i) => {
         const body = (
           <>

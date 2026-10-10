@@ -205,6 +205,16 @@ export default function MessagesPanel({
     }
   }, [loading, stream, amqp, offsetKind, offsetValue, cid, vhost, name, n, take, mode, where]);
 
+  // A dead-letter queue opens with its messages, as in the mockup: a peek
+  // puts every message back, so reading on open loses nothing.
+  const autoPeeked = useRef(false);
+  const readyNow = queue?.messages_ready ?? 0;
+  useEffect(() => {
+    if (autoPeeked.current || result || stream || !isDlqName(name) || readyNow === 0 || mode !== "peek") return;
+    autoPeeked.current = true;
+    void get();
+  }, [result, stream, name, readyNow, mode, get]);
+
   const selectedRows = useMemo(() => shown.filter((r) => selected.has(r.key)), [shown, selected]);
   const currentRow = useMemo(
     () => shown.find((r) => r.key === current) ?? (selectedRows.length ? selectedRows[0] : null),
