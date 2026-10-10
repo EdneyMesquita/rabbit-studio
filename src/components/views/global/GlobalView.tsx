@@ -252,25 +252,27 @@ export default function GlobalView({ shown }: ViewProps) {
           ) : (
             <table className="w-full min-w-max table-fixed border-separate border-spacing-0 font-data" aria-label="Clusters">
               <colgroup>
-                {/* The numbers first: what a glance needs fits the narrowest pane. */}
-                <col style={{ width: 180 }} />
-                <col style={{ width: 104 }} />
+                {/* Compact, so the numbers fit beside the problems inspector. */}
+                <col style={{ width: 172 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 120 }} />
                 <col style={{ width: 56 }} />
-                <col style={{ width: 72 }} />
-                <col style={{ width: 72 }} />
-                <col style={{ width: 72 }} />
-                <col style={{ width: 68 }} />
-                <col style={{ width: 56 }} />
-                <col style={{ width: 70 }} />
-                <col style={{ width: 140 }} />
+                <col style={{ width: 52 }} />
                 <col style={{ width: 64 }} />
-                <col style={{ width: 110 }} />
+                <col style={{ width: 64 }} />
+                <col style={{ width: 64 }} />
+                <col style={{ width: 60 }} />
+                <col style={{ width: 52 }} />
+                <col style={{ width: 64 }} />
+                <col style={{ width: 100 }} />
               </colgroup>
               <thead>
                 <tr>
                   {[
                     "connection",
                     "status",
+                    "cluster",
+                    "version",
                     "nodes",
                     "publish",
                     "deliver",
@@ -278,8 +280,6 @@ export default function GlobalView({ shown }: ViewProps) {
                     "unacked",
                     "conns",
                     "problems",
-                    "cluster",
-                    "version",
                     "queue depth",
                   ].map((h, i) => (
                     <th
@@ -287,7 +287,7 @@ export default function GlobalView({ shown }: ViewProps) {
                       scope="col"
                       className={cn(
                         "sticky top-0 z-[2] h-[30px] border-r border-b border-r-line-soft border-b-line bg-panel px-2.5 font-sans text-sm font-medium whitespace-nowrap text-fg-2 last:border-r-0",
-                        i >= 3 && i <= 8 ? "text-right" : "text-left",
+                        i >= 5 && i <= 10 ? "text-right" : "text-left",
                       )}
                     >
                       {h}
@@ -425,6 +425,8 @@ const ClusterRow = memo(function ClusterRow({
           <StateLabel tone={health.tone}>{health.label}</StateLabel>
         )}
       </td>
+      <td className={cn(td, "group-hover/row:bg-row-hover")}>{o?.cluster_name ?? dash}</td>
+      <td className={cn(td, "text-fg-3 group-hover/row:bg-row-hover")}>{o?.rabbitmq_version ?? dash}</td>
       <td className={cn(td, "group-hover/row:bg-row-hover")}>
         <span className="inline-flex gap-[3px] align-middle">
           {nodes.map((n) => {
@@ -443,8 +445,6 @@ const ClusterRow = memo(function ClusterRow({
       <td className={cn(td, "text-right group-hover/row:bg-row-hover", problemCount ? (hasCrit ? "text-danger" : "text-warn") : "text-fg-3")}>
         {connected && entry ? problemCount : dash}
       </td>
-      <td className={cn(td, "group-hover/row:bg-row-hover")}>{o?.cluster_name ?? dash}</td>
-      <td className={cn(td, "text-fg-3 group-hover/row:bg-row-hover")}>{o?.rabbitmq_version ?? dash}</td>
       <td className={cn(td, "group-hover/row:bg-row-hover")}>
         <Sparkline points={depth} label={`${profile.name} queue depth, last 5 minutes`} />
       </td>

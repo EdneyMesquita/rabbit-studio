@@ -294,3 +294,20 @@ svg.lucide[stroke-width="2"] {
   stroke-width: 1.75;
   shape-rendering: geometricPrecision;
 }
+
+/* Narrow windows (as the mockup at 960px): the inspector goes under its
+   table instead of beside it, so it is never squeezed out. */
+@media (max-width: 960px) {
+  :has(> aside[data-inspector]) {
+    flex-direction: column;
+  }
+  aside[data-inspector] {
+    width: 100% !important;
+    height: 45%;
+    border-left: 0;
+    border-top: 1px solid var(--color-line);
+  }
+  aside[data-inspector] > [role="separator"] {
+    display: none;
+  }
+}

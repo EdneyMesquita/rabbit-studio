@@ -27,7 +27,8 @@ export function Inspector({
   return (
     <aside
       aria-label={label}
-      className="relative flex min-h-0 shrink-0 flex-col border-l border-line bg-editor max-[900px]:hidden"
+      data-inspector=""
+      className="relative flex min-h-0 shrink-0 flex-col border-l border-line bg-editor"
       style={{ width }}
     >
       <InspectorResizer width={width} />
