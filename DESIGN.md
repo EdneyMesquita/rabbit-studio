@@ -414,7 +414,7 @@ The family's JetBrains-derived neutral stack in twin themes, one blue accent, th
 - Eight swatches in picker order: **Green, Blue, Amber, Red, Magenta, Teal, Violet, Slate**. A connection without a chosen color gets a stable one hashed from its id. The workspace (every-cluster) tab is always **Slate**, never a connection's hue. Chip initials are set in **Connection Ink** (on-connection) at 600. Production clusters take the hot hues by convention, not by rule: the folder, the lock mark and the typed guard carry the environment; the color carries the connection.
 
 ### App mark
-- **Mark Peach / Mark Orange / Mark Rim / Mark Highlight** (mark-top, mark-body, mark-rim, mark-highlight): the family's rounded-square mark on a near-black gradient tile, with Rabbit's own object, a rabbit head (Mongo Studio has a cylinder, Postgres Studio a table). The source is icons/icon-source.svg; the toolbar renders it at 18px. Used only inside the app mark; never as an interface color.
+- **Mark Peach / Mark Orange / Mark Rim / Mark Highlight** (mark-top, mark-body, mark-rim, mark-highlight): the family's rounded-square mark on a near-black gradient tile, with Rabbit's own object, a rabbit sitting in profile built from soft-cornered blocks, the RabbitMQ mark's square window become its eye (Mongo Studio has a cylinder, Postgres Studio a table). The source is icons/icon-source.svg; the toolbar renders it at 18px. Used only inside the app mark; never as an interface color.
 
 ### Neutral
 - **Editor** (editor-*): the view surface, tab row, view toolbars, inspector, dialogs, fields (fields share the editor tone in both themes).

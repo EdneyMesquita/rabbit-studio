@@ -56,6 +56,6 @@ None. No real customers, benchmarks or testimonials exist; do not fabricate them
 ## Brand Commitments
 
 - Rabbit Studio is the third product of a family with Mongo Studio (~/development/mongo-studio) and Postgres Studio (~/development/postgres-studio). It inherits their visual world, "The Data IDE" (see postgres-studio/DESIGN.md): a desktop IDE frame, not a web dashboard. A first web-dashboard mockup was rejected by the user on 2026-10-10 as "too web".
-- App mark in the family grammar (dark rounded square, one object in a vertical brand gradient): Mongo Studio a green cylinder, Postgres Studio a blue table, Rabbit Studio an orange rabbit head (icons/icon-source.svg).
+- App mark in the family grammar (dark rounded square, one object in a vertical brand gradient): Mongo Studio a green cylinder, Postgres Studio a blue table, Rabbit Studio an orange rabbit in profile, built from soft-cornered blocks like the RabbitMQ mark, with the mark's square window as its eye (icons/icon-source.svg).
 - Two twin themes, dark default, light toggle.
 - UI copy in English like the siblings (confirmed by the user on 2026-10-10); RabbitMQ terms verbatim.

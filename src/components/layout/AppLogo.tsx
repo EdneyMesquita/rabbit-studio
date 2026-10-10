@@ -7,7 +7,7 @@ interface AppLogoProps {
 
 /**
  * The app mark (icons/icon-source.svg): the family's dark rounded square
- * with Rabbit Studio's rabbit head, inline so it scales crisply at any
+ * with Rabbit Studio's rabbit in profile (blocks like the RabbitMQ mark, the window as its eye), inline so it scales crisply at any
  * size. Gradient ids are per instance: two logos on screen (toolbar and
  * welcome) mustn't share them.
  */
@@ -23,30 +23,25 @@ export function AppLogo({ className }: AppLogoProps) {
           <stop offset="0" stopColor="#242837" />
           <stop offset="1" stopColor="#0d0f14" />
         </linearGradient>
-        <linearGradient id={body} x1="512" y1="210" x2="512" y2="800" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#FFC28F" />
+        <linearGradient id={body} x1="512" y1="180" x2="512" y2="820" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#FFB27A" />
           <stop offset="1" stopColor="#E8590C" />
         </linearGradient>
       </defs>
       <rect width="1024" height="1024" rx="200" fill={`url(#${bg})`} />
-      <g fill={`url(#${body})`}>
-        <rect x="322" y="196" width="140" height="360" rx="70" transform="rotate(-9 392 520)" />
-        <rect x="562" y="196" width="140" height="360" rx="70" transform="rotate(9 632 520)" />
-        <ellipse cx="512" cy="600" rx="262" ry="212" />
+      <g transform="translate(14 22)">
+        <rect x="606" y="196" width="88" height="250" rx="34" fill="#C2460A" transform="rotate(-8 650 440)" />
+        <rect x="508" y="170" width="96" height="290" rx="36" fill={`url(#${body})`} transform="rotate(-16 556 440)" />
+        <rect x="536" y="212" width="40" height="190" rx="20" fill="#FFE2C8" opacity=".7" transform="rotate(-16 556 440)" />
+        <g fill={`url(#${body})`}>
+          <rect x="494" y="372" width="290" height="250" rx="64" />
+          <rect x="236" y="498" width="470" height="292" rx="96" />
+          <rect x="196" y="560" width="96" height="96" rx="40" />
+          <rect x="626" y="722" width="150" height="68" rx="30" />
+        </g>
+        <rect x="672" y="444" width="56" height="56" rx="14" fill="#7A2C05" opacity=".85" />
+        <rect x="760" y="528" width="24" height="26" rx="10" fill="#7A2C05" opacity=".7" />
       </g>
-      <rect x="360" y="246" width="64" height="236" rx="32" fill="#FFE2C8" opacity=".75" transform="rotate(-9 392 520)" />
-      <rect x="600" y="246" width="64" height="236" rx="32" fill="#FFE2C8" opacity=".75" transform="rotate(9 632 520)" />
-      <circle cx="420" cy="584" r="32" fill="#8F3506" opacity=".8" />
-      <circle cx="604" cy="584" r="32" fill="#8F3506" opacity=".8" />
-      <path d="M 482 650 Q 512 632 542 650 Q 528 682 512 684 Q 496 682 482 650 Z" fill="#8F3506" opacity=".7" />
-      <path
-        d="M 512 684 V 716 M 512 716 Q 486 744 456 728 M 512 716 Q 538 744 568 728"
-        fill="none"
-        stroke="#8F3506"
-        strokeWidth="16"
-        strokeLinecap="round"
-        opacity=".5"
-      />
     </svg>
   );
 }

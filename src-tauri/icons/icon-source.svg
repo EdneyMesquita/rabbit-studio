@@ -1,23 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#232838"/>
-      <stop offset="1" stop-color="#0b0d12"/>
+      <stop offset="0" stop-color="#242837"/>
+      <stop offset="1" stop-color="#0d0f14"/>
     </linearGradient>
-    <linearGradient id="body" x1="512" y1="262" x2="512" y2="762" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#6E9BFF"/>
-      <stop offset="1" stop-color="#2A5DC9"/>
+    <linearGradient id="body" x1="512" y1="180" x2="512" y2="820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFB27A"/>
+      <stop offset="1" stop-color="#E8590C"/>
     </linearGradient>
-    <clipPath id="card">
-      <rect x="212" y="262" width="600" height="500" rx="76"/>
-    </clipPath>
   </defs>
   <rect width="1024" height="1024" rx="200" fill="url(#bg)"/>
-  <g clip-path="url(#card)">
-    <rect x="212" y="262" width="600" height="500" fill="url(#body)"/>
-    <rect x="212" y="262" width="600" height="150" fill="#B7CDFF"/>
-    <path d="M 212 412 H 812 M 212 528 H 812 M 212 644 H 812 M 418 412 V 762" stroke="#163A88" stroke-width="20" opacity=".55"/>
+  <g transform="translate(14 22)">
+    <!-- far ear, a step behind and darker: depth in profile -->
+    <rect x="606" y="196" width="88" height="250" rx="34" fill="#C2460A" transform="rotate(-8 650 440)"/>
+    <!-- near ear, leaning back -->
+    <rect x="508" y="170" width="96" height="290" rx="36" fill="url(#body)" transform="rotate(-16 556 440)"/>
+    <rect x="536" y="212" width="40" height="190" rx="20" fill="#FFE2C8" opacity=".7" transform="rotate(-16 556 440)"/>
+    <g fill="url(#body)">
+      <!-- head and body: blocks with soft corners, like the original mark -->
+      <rect x="494" y="372" width="290" height="250" rx="64"/>
+      <rect x="236" y="498" width="470" height="292" rx="96"/>
+      <!-- tail and front paw -->
+      <rect x="196" y="560" width="96" height="96" rx="40"/>
+      <rect x="626" y="722" width="150" height="68" rx="30"/>
+    </g>
+    <!-- the eye: a rounded square window, the original's signature, moved to the profile -->
+    <rect x="672" y="444" width="56" height="56" rx="14" fill="#7A2C05" opacity=".85"/>
+    <rect x="760" y="528" width="24" height="26" rx="10" fill="#7A2C05" opacity=".7"/>
   </g>
-  <circle cx="314" cy="337" r="34" fill="#163A88" opacity=".8"/>
-  <rect x="386" y="320" width="330" height="34" rx="17" fill="#163A88" opacity=".45"/>
 </svg>
