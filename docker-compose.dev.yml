@@ -1,0 +1,89 @@
+# Local RabbitMQ servers for developing and testing Rabbit Studio.
+#
+#   Cluster A  rabbitmq:4.2, two nodes (rabbit-a1, rabbit-a2) forming one cluster
+#              a1: AMQP 127.0.0.1:5673  mgmt 127.0.0.1:15673
+#              a2: AMQP 127.0.0.1:5674  mgmt 127.0.0.1:15674
+#   Cluster B  rabbitmq:3.13, single node (rabbit-b1)
+#              AMQP 127.0.0.1:5675  mgmt 127.0.0.1:15675
+#
+# All servers: user admin / admin (administrator). Ports are bound to
+# 127.0.0.1 and avoid 5672/15672, which belong to another project's RabbitMQ.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#   scripts/seed-dev.sh            # seeds A and B (idempotent)
+#   scripts/traffic.sh             # background traffic on cluster A
+#   scripts/traffic.sh stop
+#   docker compose -f docker-compose.dev.yml down -v   # wipe all data
+name: rabbit-studio-dev
+
+x-rabbit-common: &rabbit-common
+  restart: unless-stopped
+  environment: &rabbit-env
+    RABBITMQ_DEFAULT_USER: admin
+    RABBITMQ_DEFAULT_PASS: admin
+  volumes:
+    - ./scripts/rabbit/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+
+services:
+  rabbit-a1:
+    <<: *rabbit-common
+    image: rabbitmq:4.2-management
+    hostname: rabbit-a1
+    container_name: rabbit-studio-dev-a1
+    environment:
+      <<: *rabbit-env
+      RABBITMQ_NODENAME: rabbit@rabbit-a1
+      RABBITMQ_ERLANG_COOKIE: studio-dev-cluster-a-cookie
+    volumes:
+      - ./scripts/rabbit/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./scripts/rabbit/cluster-a.conf:/etc/rabbitmq/conf.d/20-studio.conf:ro
+      - rabbit-a1-data:/var/lib/rabbitmq
+    ports:
+      - "127.0.0.1:5673:5672"
+      - "127.0.0.1:15673:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+
+  rabbit-a2:
+    <<: *rabbit-common
+    image: rabbitmq:4.2-management
+    hostname: rabbit-a2
+    container_name: rabbit-studio-dev-a2
+    depends_on:
+      rabbit-a1:
+        condition: service_healthy
+    environment:
+      <<: *rabbit-env
+      RABBITMQ_NODENAME: rabbit@rabbit-a2
+      RABBITMQ_ERLANG_COOKIE: studio-dev-cluster-a-cookie
+    volumes:
+      - ./scripts/rabbit/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./scripts/rabbit/cluster-a.conf:/etc/rabbitmq/conf.d/20-studio.conf:ro
+      - rabbit-a2-data:/var/lib/rabbitmq
+    ports:
+      - "127.0.0.1:5674:5672"
+      - "127.0.0.1:15674:15672"
+
+  rabbit-b1:
+    <<: *rabbit-common
+    image: rabbitmq:3.13-management
+    hostname: rabbit-b1
+    container_name: rabbit-studio-dev-b1
+    environment:
+      <<: *rabbit-env
+      RABBITMQ_NODENAME: rabbit@rabbit-b1
+    volumes:
+      - ./scripts/rabbit/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./scripts/rabbit/cluster-b.conf:/etc/rabbitmq/conf.d/20-studio.conf:ro
+      - rabbit-b1-data:/var/lib/rabbitmq
+    ports:
+      - "127.0.0.1:5675:5672"
+      - "127.0.0.1:15675:15672"
+
+volumes:
+  rabbit-a1-data:
+  rabbit-a2-data:
+  rabbit-b1-data:
