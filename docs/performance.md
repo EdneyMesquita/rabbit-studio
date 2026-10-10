@@ -1,5 +1,22 @@
 # Performance and resource use
 
+## Budget (what "fast and light" means here) and where it stands
+
+| Budget | Limit | Measured (release, Linux, WebKitGTK) |
+|---|---|---|
+| Page ready after launch (navigation start to the app's first commit) | < 300 ms | 196 – 263 ms (5 runs) |
+| CPU, idle (nothing connected or window hidden) | < 0.1 % of one core | 0.03 % |
+| CPU, 4 clusters live, global view open, 5 s refresh | < 5 % of one core | 2.6 % |
+| Memory, 4 clusters live (PSS, all processes) | ≤ the SQL sibling idle (263 MB) | 234 MB |
+| Main JS chunk | < 500 kB | 463 kB (sibling: 637 kB) |
+| Release binary | ≤ the sibling's (16.8 MiB) | 15.8 MiB |
+| Management call, median on the LAN | < 25 ms | 6.9 – 22.6 ms |
+| Polling while a tab or the window is hidden | none | none (useLive `enabled`, `visibilitychange`) |
+| Main-thread long tasks during live refresh | none | 0 in 69 s |
+
+All measured with scripts in this repo: `scripts/measure-live.sh` (CPU,
+memory), `scripts/bench.mjs` (calls), the `startup` smoke mode (page ready).
+
 Measured on 2026-10-10 on Linux (WebKitGTK), against the dev clusters in
 `docker-compose.dev.yml` (A: 2 nodes, RabbitMQ 4.2, perf-test traffic at
 30 msg/s; B: RabbitMQ 3.13) and one more 4.2 broker with 18 queues.

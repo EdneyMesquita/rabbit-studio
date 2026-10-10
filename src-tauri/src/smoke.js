@@ -2,6 +2,16 @@
 // real window, through the real IPC, and writes what it saw to <file>.
 (async () => {
   const T = window.__TAURI_INTERNALS__;
+  if ("__MODE__" === "startup") {
+    // When the page was ready: navigation start to the app's first commit.
+    const mark = performance.getEntriesByName("app-mounted")[0];
+    const nav = performance.getEntriesByType("navigation")[0];
+    await T.invoke("write_text_file", {
+      path: "__OUT__",
+      contents: JSON.stringify({ ok: true, appMountedMs: mark && Math.round(mark.startTime), domContentLoadedMs: nav && Math.round(nav.domContentLoadedEventEnd) }),
+    });
+    return;
+  }
   if ("__MODE__" === "idle") {
     await T.invoke("write_text_file", { path: "__OUT__", contents: JSON.stringify({ ok: true, mode: "idle" }) });
     return;
