@@ -52,7 +52,8 @@ export function AppShell({ toolbar, stripe, sidePanel, statusBar, children }: Ap
           <div className="min-h-0 flex-1 overflow-y-auto">{sidePanel}</div>
           <SidebarResizer />
         </aside>
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-editor">{children}</main>
+        {/* clip, not hidden: nothing (a focus, a scrollIntoView) may scroll the editor sideways. */}
+        <main className="flex min-w-0 flex-1 flex-col overflow-clip bg-editor">{children}</main>
       </div>
       {statusBar}
     </div>

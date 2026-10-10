@@ -67,7 +67,13 @@ export function useVirtualRows(
       const el = scroller.current;
       if (!el) return;
       if (!enabled) {
-        el.querySelector(`tr[data-row="${index}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+        // Only this scroller moves (scrollIntoView would scroll every ancestor).
+        const row = el.querySelector<HTMLElement>(`tr[data-row="${index}"]`);
+        if (!row) return;
+        const top = row.offsetTop - headerHeight;
+        const bottom = row.offsetTop + row.offsetHeight;
+        if (top < el.scrollTop) el.scrollTop = top;
+        else if (bottom > el.scrollTop + el.clientHeight) el.scrollTop = bottom - el.clientHeight;
         return;
       }
       const top = index * rowHeight + (expanded && index > expanded.index ? expanded.height : 0);
