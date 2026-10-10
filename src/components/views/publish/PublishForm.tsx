@@ -2,7 +2,7 @@ import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { CircleCheck, CircleX, Inbox, Plus, RefreshCw, Send, TriangleAlert, X } from "lucide-react";
 import { toast } from "sonner";
-import { Notice, SectionHeader } from "@/components/data/parts";
+import { Dash, Notice, SectionHeader } from "@/components/data/parts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -187,6 +187,7 @@ export default function PublishForm({ connectionId, vhost, exchange, routingKey,
   const payloadError = encoding === "base64" && body.trim() && !base64Ok(body) ? "Payload is not valid base64" : null;
   const priorityError = priority !== "" && !/^\d{1,3}$/.test(priority) ? "Priority is a number" : null;
   const problem = headerError ?? payloadError ?? priorityError;
+  const propCount = [contentType.trim(), priority, correlationId, messageId, replyTo, expiration, type, appId].filter(Boolean).length + 1 + (stamp ? 1 : 0);
   const times = Math.max(1, Math.min(1000, Math.floor(Number(count)) || 1));
   const blocked = readOnly ? "This connection is read-only, so publishing is disabled." : problem;
 
@@ -283,18 +284,30 @@ export default function PublishForm({ connectionId, vhost, exchange, routingKey,
           <kbd className="rounded-xs bg-white/20 px-1 font-sans text-[10px]">Ctrl ⏎</kbd>
         </Button>
       </div>
-      {readOnly && <Notice tone="info">This connection is <b>read-only</b>, so publishing is disabled.</Notice>}
-      {production && !readOnly && (
-        <Notice tone="crit">
-          Publishing to a <b>production</b> connection. Real consumers will process this message.
+      {readOnly ? (
+        <Notice tone="info">
+          This connection is <b>read-only</b>, so publishing is disabled.
         </Notice>
+      ) : (
+        (production || problem) && (
+          <Notice tone={production ? "crit" : "warn"}>
+            {production && (
+              <>
+                Publishing to a <b>production</b> connection. Real consumers will process this message.
+              </>
+            )}
+            {production && problem && " "}
+            {problem}
+          </Notice>
+        )
       )}
-      {problem && !readOnly && <Notice tone="warn">{problem}</Notice>}
 
       <div className="flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex h-8 shrink-0 items-center gap-2 border-b border-line-soft px-3 text-sm text-fg-2">
             <span>Payload</span>
+            <span className="min-w-0 truncate font-mono text-[12px] text-fg-3">{contentType.trim() || "no content type"}</span>
+            <span className="flex-1" />
             <SegmentedControl
               aria-label="Payload encoding"
               value={encoding}
@@ -304,7 +317,6 @@ export default function PublishForm({ connectionId, vhost, exchange, routingKey,
                 { value: "base64", label: "Base64" },
               ]}
             />
-            <span className="flex-1" />
             {json === true && (
               <span className="inline-flex items-center gap-1 text-ok">
                 <CircleCheck className="size-3" aria-hidden />
@@ -312,9 +324,9 @@ export default function PublishForm({ connectionId, vhost, exchange, routingKey,
               </span>
             )}
             {json === false && (
-              <span className={cn("inline-flex items-center gap-1", wantsJson ? "text-danger" : "text-fg-3")}>
-                <CircleX className="size-3" aria-hidden />
-                {wantsJson ? "invalid JSON" : "plain text"}
+              <span className={cn("inline-flex items-center gap-1", wantsJson ? "text-danger" : "text-warn")}>
+                {wantsJson ? <CircleX className="size-3" aria-hidden /> : <TriangleAlert className="size-3" aria-hidden />}
+                invalid JSON
               </span>
             )}
             <Button
@@ -386,6 +398,7 @@ export default function PublishForm({ connectionId, vhost, exchange, routingKey,
           )}
 
           <SectionHeader
+            count={rows.length || undefined}
             actions={
               <Button
                 variant="ghost"
@@ -400,7 +413,7 @@ export default function PublishForm({ connectionId, vhost, exchange, routingKey,
             Headers
           </SectionHeader>
           <div className="flex flex-col gap-1 px-3 pb-2">
-            {rows.length === 0 && <div className="text-sm text-fg-3">No headers.</div>}
+            {rows.length === 0 && <Dash />}
             {rows.map((r) => (
               <div key={r.id} className="grid grid-cols-[1fr_1fr_64px_20px] items-center gap-1">
                 <Input className={fieldCls} placeholder="key" aria-label="Header key" value={r.key} onChange={(e) => patchRow(r.id, { key: e.target.value })} />
@@ -432,7 +445,7 @@ export default function PublishForm({ connectionId, vhost, exchange, routingKey,
             ))}
           </div>
 
-          <SectionHeader>Properties</SectionHeader>
+          <SectionHeader count={propCount}>Properties</SectionHeader>
           <div className="flex flex-col gap-1.5 pb-3">
             <PropRow label="content_type">
               <Input className={fieldCls} list="pub-content-types" value={contentType} onChange={(e) => setContentType(e.target.value)} />
@@ -472,7 +485,7 @@ export default function PublishForm({ connectionId, vhost, exchange, routingKey,
             <PropRow label="timestamp">
               <span className="flex items-center gap-2 text-fg-2">
                 <Switch size="sm" checked={stamp} onCheckedChange={setStamp} aria-label="Set the timestamp to now" />
-                {stamp ? "now, when published" : "not set"}
+                {stamp ? "now, when published" : <Dash />}
               </span>
             </PropRow>
           </div>

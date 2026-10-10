@@ -14,7 +14,8 @@ const NEW_CONNECTION_COLOR = "#1E9AA6";
 function initialInput(editing?: ConnectionProfile, copyOf?: ConnectionProfile): ConnectionProfileInput {
   if (editing) return profileToInput(editing);
   if (copyOf) return { ...profileToInput(copyOf), id: null, name: `${copyOf.name} copy` };
-  return { ...newProfileInput(), color: NEW_CONNECTION_COLOR };
+  // A new connection starts on the URL form (host and port stays an option).
+  return { ...newProfileInput(), color: NEW_CONNECTION_COLOR, source: { kind: "uri", uri: "" } };
 }
 
 /** The connection form's state and its test / save actions. */

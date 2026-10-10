@@ -1,9 +1,9 @@
 import { memo } from "react";
-import type { ReactNode } from "react";
 import { ArrowRightLeft, Copy, Reply, Send, Trash2 } from "lucide-react";
 import { Inspector } from "@/components/data/Inspector";
 import { JsonView } from "@/components/data/JsonView";
-import { KeyValues, SectionHeader } from "@/components/data/parts";
+import { TypedTree } from "@/components/data/TypedTree";
+import { Dash, KeyHints, SectionHeader } from "@/components/data/parts";
 import { Button } from "@/components/ui/button";
 import { bytes, dateTime, int } from "@/lib/rabbit/format";
 import { hexDump, originOf, secondsToMs, type Row } from "./lib/messages";
@@ -36,26 +36,17 @@ export const MessageInspector = memo(function MessageInspector({
   const { msg, props, headers, deaths } = row;
   const origin = originOf(row);
   const last = deaths[0];
-  const propRows: [ReactNode, ReactNode][] = [
-    ["exchange", msg.exchange === "" ? <span className="text-fg-3">(AMQP default)</span> : msg.exchange],
-    ["routing_key", msg.routing_key],
-    ["redelivered", <span className="text-json-keyword">{String(msg.redelivered)}</span>],
-    ...(msg.offset != null ? ([["offset", <span className="text-json-number">{int(msg.offset)}</span>]] as [ReactNode, ReactNode][]) : []),
-    ...Object.entries(props)
-      .filter(([k]) => k !== "headers")
-      .map(([k, v]): [ReactNode, ReactNode] => [
-        k,
-        k === "timestamp" ? (
-          <span className="text-json-bson" title={String(v)}>
-            {dateTime(secondsToMs(v))}
-          </span>
-        ) : typeof v === "number" ? (
-          <span className="text-json-number">{v}</span>
-        ) : (
-          String(v)
-        ),
-      ]),
-  ];
+  const propTree: Record<string, unknown> = {
+    exchange: msg.exchange === "" ? "(AMQP default)" : msg.exchange,
+    routing_key: msg.routing_key,
+    redelivered: msg.redelivered,
+    ...(msg.offset != null ? { offset: msg.offset } : {}),
+  };
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "headers") continue;
+    propTree[k] = k === "timestamp" ? dateTime(secondsToMs(v)) : v;
+  }
+  const headerCount = Object.keys(headers).length;
   const ctype = props.content_type ?? (row.json !== undefined ? "json" : row.binary ? "binary" : "text");
   const xError = headers["x-error"] ?? headers["x-exception-message"];
 
@@ -102,7 +93,7 @@ export const MessageInspector = memo(function MessageInspector({
               <dt className="text-json-key">exchange</dt>
               <dd className="truncate">{d.exchange === "" ? "(AMQP default)" : d.exchange}</dd>
               <dt className="text-json-key">routing keys</dt>
-              <dd className="truncate">{(d["routing-keys"] ?? []).join(", ")}</dd>
+              <dd className="truncate">{d["routing-keys"]?.length ? d["routing-keys"].join(", ") : <Dash />}</dd>
               <dt className="text-json-key">reason</dt>
               <dd className="text-json-keyword">
                 {d.reason} · {d.count}×
@@ -128,31 +119,25 @@ export const MessageInspector = memo(function MessageInspector({
         </div>
       )}
 
-      <SectionHeader>Properties {propRows.length}</SectionHeader>
-      <KeyValues rows={propRows} />
+      <SectionHeader count={Object.keys(propTree).length}>Properties</SectionHeader>
+      <TypedTree value={propTree} open={1} />
 
-      <SectionHeader>Headers {Object.keys(headers).length}</SectionHeader>
-      {Object.keys(headers).length ? (
-        <JsonView value={headers} defaultDepth={1} className="px-3 py-2" />
+      <SectionHeader count={headerCount}>Headers</SectionHeader>
+      {headerCount ? (
+        <TypedTree value={headers} open={1} />
       ) : (
-        <div className="px-3 py-2 text-sm text-fg-3">No headers.</div>
+        <div className="px-3 py-1">
+          <Dash />
+        </div>
       )}
 
-      <SectionHeader
-        actions={
-          <span className="font-sans font-normal tracking-normal normal-case text-fg-3">
-            {ctype} · {bytes(msg.payload_bytes)}
-          </span>
-        }
-      >
-        Payload
-      </SectionHeader>
+      <SectionHeader count={`${ctype} · ${bytes(msg.payload_bytes)}`}>Payload</SectionHeader>
       {row.binary ? (
         <pre className="overflow-x-auto px-3 py-2 font-data text-fg-2">{hexDump(row.binary)}</pre>
       ) : row.json !== undefined ? (
         <JsonView value={row.json} defaultDepth={3} className="px-3 py-2" />
       ) : (
-        <pre className="px-3 py-2 font-data break-all whitespace-pre-wrap text-fg">{row.text || <span className="text-fg-3">(empty)</span>}</pre>
+        <pre className="px-3 py-2 font-data break-all whitespace-pre-wrap text-fg">{row.text || <Dash />}</pre>
       )}
       {msg.payload_bytes > row.text.length && !row.binary && row.msg.payload_encoding === "string" && (
         <div className="px-3 pb-2 text-xs text-fg-3">Truncated to {bytes(row.text.length)} for display.</div>
@@ -188,6 +173,10 @@ export const MessageInspector = memo(function MessageInspector({
           <Trash2 className="size-3.5" />
           Delete
         </Button>
+      </div>
+      {/* The scroller is the Inspector's, so the hints stick to its bottom. */}
+      <div className="sticky bottom-0 bg-editor">
+        <KeyHints hints={[["Republish", "R"], ...(origin ? ([["Replay", "⏎"]] as [string, string][]) : []), ["Copy", "Ctrl C"]]} />
       </div>
     </Inspector>
   );

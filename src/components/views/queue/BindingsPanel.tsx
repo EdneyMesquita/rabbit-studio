@@ -3,7 +3,7 @@ import { Link, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { Column } from "@/components/data/DataTable";
 import { DataTable } from "@/components/data/DataTable";
-import { EmptyState, ErrorState, Loading } from "@/components/data/parts";
+import { Dash, EmptyState, ErrorState, Loading } from "@/components/data/parts";
 import { Button } from "@/components/ui/button";
 import { invalidate, useLive } from "@/hooks/useLive";
 import { errorText, rabbit } from "@/lib/rabbit/client";
@@ -74,7 +74,7 @@ export default function BindingsPanel({ cid, vhost, name, shown }: { cid: string
         header: "arguments",
         width: 240,
         cell: (b) =>
-          b.arguments && Object.keys(b.arguments).length ? JSON.stringify(b.arguments) : <span className="text-fg-3">{"{}"}</span>,
+          b.arguments && Object.keys(b.arguments).length ? JSON.stringify(b.arguments) : <Dash />,
       },
       {
         id: "act",

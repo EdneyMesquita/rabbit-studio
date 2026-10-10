@@ -1,13 +1,14 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { ArrowRightLeft, Ban, Check, Download, Eye, Funnel, Play, Reply, Rows3, Send, Trash2, Waves } from "lucide-react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
 import type { Column } from "@/components/data/DataTable";
 import { DataTable } from "@/components/data/DataTable";
-import { EmptyState, Notice } from "@/components/data/parts";
+import { Dash, EmptyState, Notice } from "@/components/data/parts";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { invalidate } from "@/hooks/useLive";
 import { errorText, rabbit } from "@/lib/rabbit/client";
 import { bytes, dateTime, int } from "@/lib/rabbit/format";
 import { confirmDestructive, isReadOnly } from "@/lib/rabbit/guard";
@@ -21,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { MessageInspector, type MessageActions } from "./MessageInspector";
 import { TransferProgress } from "./TransferProgress";
 import { parseFilter } from "./lib/filter";
-import { exportShape, fingerprints, preview, secondsToMs, toRow, type Row } from "./lib/messages";
+import { exportShape, fingerprints, isDlqName, preview, secondsToMs, toRow, type Row } from "./lib/messages";
 import { hasAmqp, refreshQueues, useTransfer } from "./lib/transfer";
 
 type Mode = "peek" | "ack" | "reject";
@@ -59,6 +60,7 @@ export default function MessagesPanel({
   queue,
   focus,
   onSawDeaths,
+  onDeathSummary,
 }: {
   cid: string;
   vhost: string;
@@ -66,6 +68,8 @@ export default function MessagesPanel({
   queue: Queue | undefined;
   focus: string | null;
   onSawDeaths: () => void;
+  /** Where most of the peeked dead letters came from, or null (for the queue's notice). */
+  onDeathSummary?: (s: { queue: string; reason: string } | null) => void;
 }) {
   const stream = queue?.type === "stream";
   const quorum = queue?.type === "quorum";
@@ -92,6 +96,27 @@ export default function MessagesPanel({
     return filter.ok ? result.rows.filter((r) => filter.test(r.record)) : result.rows;
   }, [result, filter]);
   const hasDeaths = useMemo(() => shown.some((r) => r.deaths.length > 0), [shown]);
+  const dlq = isDlqName(name) || hasDeaths;
+  const topQueue = useMemo(() => {
+    const tally = new Map<string, { queue: string; reason: string; n: number }>();
+    for (const r of result?.rows ?? []) {
+      const d = r.deaths[r.deaths.length - 1];
+      if (!d) continue;
+      const k = `${d.queue}\u0000${d.reason}`;
+      const t = tally.get(k) ?? { queue: d.queue, reason: d.reason, n: 0 };
+      t.n++;
+      tally.set(k, t);
+    }
+    let best: { queue: string; reason: string; n: number } | null = null;
+    for (const t of tally.values()) if (!best || t.n > best.n) best = t;
+    return best ? `${best.queue}\u0000${best.reason}` : null;
+  }, [result]);
+  useEffect(() => {
+    if (!onDeathSummary) return;
+    if (!topQueue) return onDeathSummary(null);
+    const [queue, reason] = topQueue.split("\u0000");
+    onDeathSummary({ queue, reason });
+  }, [topQueue, onDeathSummary]);
   const n = Math.max(1, Math.min(MAX, Math.floor(Number(count) || 50)));
 
   const writeReason = readOnly
@@ -191,6 +216,8 @@ export default function MessagesPanel({
       const select = fingerprints(rows);
       if (!select.length) return;
       const s = await transfer.run({ vhost, queue: name, target, select, limit: null }, label, verb);
+      // Read the queue again so the head counts follow the toast.
+      invalidate(`${cid}:queue:${vhost}:${name}`);
       if (s && s.done > 0 && !s.failed && !s.missing) {
         const gone = new Set(rows.map((r) => r.key));
         setResult((r) => (r ? { ...r, rows: r.rows.filter((x) => !gone.has(x.key)) } : r));
@@ -198,7 +225,7 @@ export default function MessagesPanel({
         setCurrent(null);
       }
     },
-    [transfer, vhost, name],
+    [transfer, cid, vhost, name],
   );
 
   const replay = useCallback(
@@ -278,38 +305,40 @@ export default function MessagesPanel({
   );
 
   const columns = useMemo<Column<Row>[]>(() => {
-    const cols: Column<Row>[] = [
-      stream
-        ? {
-            id: "offset",
-            header: "offset",
-            width: 80,
-            align: "right",
-            cell: (r) => <span className="text-json-number">{int(r.msg.offset)}</span>,
-            sortValue: (r) => r.msg.offset ?? 0,
-          }
-        : { id: "n", header: "#", width: 48, align: "right", cell: (r) => <span className="text-fg-3">{r.index + 1}</span>, sortValue: (r) => r.index },
+    const hint = (t: string) => <span className="ml-1.5 font-sans text-[10px] font-normal text-fg-3">{t}</span>;
+    const head = (name: string, t?: string) => (
+      <>
+        {name}
+        {t && hint(t)}
+      </>
+    );
+    const cols: Column<Row>[] = [];
+    // Streams are numbered by offset; the table's own # column does the rest.
+    if (stream) {
+      cols.push({
+        id: "offset",
+        header: "offset",
+        width: 80,
+        align: "right",
+        cell: (r) => <span className="text-json-number">{int(r.msg.offset)}</span>,
+        sortValue: (r) => r.msg.offset ?? 0,
+      });
+    }
+    cols.push(
       {
         id: "id",
-        header: "message_id",
+        header: head("message_id", "str"),
         width: 170,
-        cell: (r) => (r.props.message_id ? <span className="text-json-bson">{r.props.message_id}</span> : <span className="text-fg-3">–</span>),
+        cell: (r) => (r.props.message_id ? <span className="text-json-bson">{r.props.message_id}</span> : <Dash />),
         sortValue: (r) => r.props.message_id,
       },
-      { id: "rk", header: "routing_key", width: 170, cell: (r) => r.msg.routing_key, sortValue: (r) => r.msg.routing_key },
-      {
-        id: "ex",
-        header: "exchange",
-        width: 150,
-        cell: (r) => (r.msg.exchange ? r.msg.exchange : <span className="text-fg-3">(default)</span>),
-        sortValue: (r) => r.msg.exchange,
-      },
-    ];
-    if (hasDeaths) {
+      { id: "rk", header: head("routing_key", "str"), width: 170, cell: (r) => r.msg.routing_key, sortValue: (r) => r.msg.routing_key },
+    );
+    if (dlq) {
       cols.push(
         {
           id: "death",
-          header: "x-first-death",
+          header: head("x-first-death", "queue · reason"),
           title: "Queue and reason of the first death",
           width: 230,
           cell: (r) => {
@@ -319,7 +348,7 @@ export default function MessagesPanel({
                 {d.queue} <span className="text-json-keyword">{d.reason}</span>
               </>
             ) : (
-              <span className="text-fg-3">–</span>
+              <Dash />
             );
           },
           sortValue: (r) => r.deaths[r.deaths.length - 1]?.queue,
@@ -329,23 +358,36 @@ export default function MessagesPanel({
           header: "deaths",
           width: 64,
           align: "right",
-          cell: (r) => <span className="text-json-number">{r.deaths.reduce((s, d) => s + (d.count ?? 0), 0) || ""}</span>,
-          sortValue: (r) => r.deaths.reduce((s, d) => s + (d.count ?? 0), 0),
+          cell: (r) => {
+            const n = r.deaths.reduce((sum, d) => sum + (d.count ?? 0), 0);
+            return n ? <span className="text-json-number">{n}</span> : <Dash />;
+          },
+          sortValue: (r) => r.deaths.reduce((sum, d) => sum + (d.count ?? 0), 0),
+        },
+      );
+    } else {
+      cols.push(
+        {
+          id: "ex",
+          header: head("exchange", "str"),
+          width: 150,
+          cell: (r) => (r.msg.exchange ? r.msg.exchange : <span className="text-fg-3">(default)</span>),
+          sortValue: (r) => r.msg.exchange,
+        },
+        {
+          id: "redelivered",
+          header: head("redelivered", "bool"),
+          width: 100,
+          cell: (r) => <span className="text-json-keyword">{String(r.msg.redelivered)}</span>,
+          sortValue: (r) => (r.msg.redelivered ? 1 : 0),
         },
       );
     }
     cols.push(
-      {
-        id: "redelivered",
-        header: "redelivered",
-        width: 92,
-        cell: (r) => <span className="text-json-keyword">{String(r.msg.redelivered)}</span>,
-        sortValue: (r) => (r.msg.redelivered ? 1 : 0),
-      },
-      { id: "ctype", header: "content_type", width: 140, cell: (r) => r.props.content_type ?? <span className="text-fg-3">–</span>, sortValue: (r) => r.props.content_type },
+      { id: "app", header: "app_id", width: 130, cell: (r) => r.props.app_id ?? <Dash />, sortValue: (r) => r.props.app_id },
       {
         id: "ts",
-        header: "timestamp",
+        header: head("timestamp", "time"),
         width: 160,
         cell: (r) => <span className="text-json-bson">{dateTime(secondsToMs(r.props.timestamp))}</span>,
         sortValue: (r) => r.props.timestamp ?? 0,
@@ -358,10 +400,10 @@ export default function MessagesPanel({
         cell: (r) => <span className="text-json-number">{bytes(r.msg.payload_bytes)}</span>,
         sortValue: (r) => r.msg.payload_bytes,
       },
-      { id: "payload", header: "payload", width: 360, cell: (r) => <span className="text-fg-3">{preview(r)}</span> },
+      { id: "payload", header: "preview", width: 360, cell: (r) => <span className="text-fg-3">{preview(r)}</span> },
     );
     return cols;
-  }, [stream, hasDeaths]);
+  }, [stream, dlq]);
 
   const rowKey = useCallback((r: Row) => r.key, []);
   const onSelectionChange = useCallback((keys: Set<string>, last: string | null) => {
@@ -389,7 +431,10 @@ export default function MessagesPanel({
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     const target = e.target as HTMLElement;
     if (target.closest("input,textarea,select") || !currentRow) return;
-    if (e.key.toLowerCase() === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (e.key === "Enter" && !target.closest("button,a") && currentRow.deaths.length && canWrite && result?.mode === "peek") {
+      e.preventDefault();
+      void replay([currentRow]);
+    } else if (e.key.toLowerCase() === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       actions.republish(currentRow);
     } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c" && !window.getSelection()?.toString()) {
@@ -536,7 +581,7 @@ export default function MessagesPanel({
       <div className="flex min-h-0 flex-1">
         <DataTable
           aria-label="Messages"
-          rowNumbers={false}
+          rowNumbers={!stream}
           rows={shown}
           columns={columns}
           rowKey={rowKey}

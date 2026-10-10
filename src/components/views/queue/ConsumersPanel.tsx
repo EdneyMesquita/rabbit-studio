@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Users } from "lucide-react";
 import type { Column } from "@/components/data/DataTable";
 import { DataTable } from "@/components/data/DataTable";
-import { EmptyState } from "@/components/data/parts";
+import { Dash, EmptyState } from "@/components/data/parts";
 import { int, percent } from "@/lib/rabbit/format";
 import { openOn } from "@/lib/rabbit/nav";
 import type { Consumer, Queue } from "@/types/rabbit";
@@ -35,7 +35,7 @@ export default function ConsumersPanel({ cid, queue: q, dlq }: { cid: string; qu
               {c.channel_details.name}
             </button>
           ) : (
-            c.channel_details?.name ?? "–"
+            c.channel_details?.name ?? <Dash />
           );
         },
         sortValue: (c) => c.channel_details?.name,
@@ -44,9 +44,9 @@ export default function ConsumersPanel({ cid, queue: q, dlq }: { cid: string; qu
         id: "peer",
         header: "peer",
         width: 150,
-        cell: (c) => (c.channel_details?.peer_host ? `${c.channel_details.peer_host}:${c.channel_details.peer_port ?? ""}` : "–"),
+        cell: (c) => (c.channel_details?.peer_host ? `${c.channel_details.peer_host}:${c.channel_details.peer_port ?? ""}` : <Dash />),
       },
-      { id: "user", header: "user", width: 100, cell: (c) => c.channel_details?.user ?? "–", sortValue: (c) => c.channel_details?.user },
+      { id: "user", header: "user", width: 100, cell: (c) => c.channel_details?.user ?? <Dash />, sortValue: (c) => c.channel_details?.user },
       {
         id: "ack",
         header: "ack",
@@ -80,7 +80,7 @@ export default function ConsumersPanel({ cid, queue: q, dlq }: { cid: string; qu
         header: "arguments",
         width: 220,
         cell: (c) =>
-          c.arguments && Object.keys(c.arguments).length ? JSON.stringify(c.arguments) : <span className="text-fg-3">{"{}"}</span>,
+          c.arguments && Object.keys(c.arguments).length ? JSON.stringify(c.arguments) : <Dash />,
       },
     ],
     [cid],

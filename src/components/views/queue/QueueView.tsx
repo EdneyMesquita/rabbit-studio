@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import { Activity, ArrowRightLeft, Eraser, Inbox, Link, RefreshCw, Reply, Rows3, Send, Trash2, Users } from "lucide-react";
-import { EmptyState, ErrorState, Loading, Metrics, Notice, StateLabel, Tag, ViewTitle, ViewToolbar } from "@/components/data/parts";
+import { Dash, EmptyState, ErrorState, Loading, Metrics, Notice, StateLabel, Tag, ViewTitle, ViewToolbar } from "@/components/data/parts";
 import type { MetricItem, Tone } from "@/components/data/parts";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -14,6 +14,7 @@ import { openDialog } from "@/store/dialogStore";
 import { useSessionsStore } from "@/store/sessionsStore";
 import type { Queue } from "@/types/rabbit";
 import type { ViewProps } from "../types";
+import { useQueueEvents } from "./lib/events";
 import { isDlqName, maxLengthOf } from "./lib/messages";
 
 const OverviewPanel = lazy(() => import("./OverviewPanel"));
@@ -46,8 +47,10 @@ export default function QueueView({ tab, shown }: ViewProps) {
     { enabled: shown },
   );
   const q = live.data;
+  const events = useQueueEvents(cid, q);
   const [sawDeaths, setSawDeaths] = useState(false);
   const onSawDeaths = useCallback(() => setSawDeaths(true), []);
+  const [deathSummary, setDeathSummary] = useState<{ queue: string; reason: string } | null>(null);
   const dlq = isDlqName(name) || sawDeaths;
   const view: QView = VIEWS.includes(tab.view as QView) ? (tab.view as QView) : isDlqName(name) ? "messages" : "overview";
   const setView = (v: QView) => useSessionsStore.getState().setView(tab.id, v);
@@ -139,7 +142,15 @@ export default function QueueView({ tab, shown }: ViewProps) {
           </Button>
         }
       >
-        <b>{int(ready)} dead-lettered messages.</b> Peek them to see where they died and why, then replay or move them.
+        <b>{int(ready)} dead-lettered messages.</b>{" "}
+        {deathSummary ? (
+          <>
+            Most came from <span className="font-mono text-[12px] text-fg">{deathSummary.queue}</span>, reason{" "}
+            <span className="font-mono text-[12px] text-fg">{deathSummary.reason}</span>.
+          </>
+        ) : (
+          "Peek them to see where they died and why, then replay or move them."
+        )}
       </Notice>,
     );
   }
@@ -178,7 +189,7 @@ export default function QueueView({ tab, shown }: ViewProps) {
         },
         {
           label: "Utilisation",
-          value: q.consumer_utilisation != null ? percent(q.consumer_utilisation) : "–",
+          value: q.consumer_utilisation != null ? percent(q.consumer_utilisation) : <Dash />,
           detail: "consumer capacity",
         },
         {
@@ -189,29 +200,32 @@ export default function QueueView({ tab, shown }: ViewProps) {
       ];
 
   const nConsumers = q.consumers ?? 0;
+  // Below 760px of toolbar the segments keep their icons only (title names them).
+  const lbl = (text: ReactNode) => <span className="@max-[760px]:hidden">{text}</span>;
   const views = [
-    { value: "overview" as const, label: "Overview", icon: <Activity /> },
-    { value: "messages" as const, label: "Messages", icon: <Rows3 /> },
+    { value: "overview" as const, label: lbl("Overview"), icon: <Activity />, title: "Overview" },
+    { value: "messages" as const, label: lbl("Messages"), icon: <Rows3 />, title: "Messages" },
     {
       value: "consumers" as const,
-      label: (
+      label: lbl(
         <>
           Consumers <span className="text-fg-3">{nConsumers}</span>
-        </>
+        </>,
       ),
       icon: <Users />,
+      title: `Consumers ${nConsumers}`,
     },
-    { value: "bindings" as const, label: "Bindings", icon: <Link /> },
-    { value: "publish" as const, label: "Publish", icon: <Send /> },
+    { value: "bindings" as const, label: lbl("Bindings"), icon: <Link />, title: "Bindings" },
+    { value: "publish" as const, label: lbl("Publish"), icon: <Send />, title: "Publish" },
   ];
 
   let body: ReactNode;
   switch (view) {
     case "overview":
-      body = <OverviewPanel queue={q} />;
+      body = <OverviewPanel queue={q} events={events} />;
       break;
     case "messages":
-      body = <MessagesPanel cid={cid} vhost={vhost} name={name} queue={q} focus={tab.focus} onSawDeaths={onSawDeaths} />;
+      body = <MessagesPanel cid={cid} vhost={vhost} name={name} queue={q} focus={tab.focus} onSawDeaths={onSawDeaths} onDeathSummary={setDeathSummary} />;
       break;
     case "consumers":
       body = <ConsumersPanel cid={cid} queue={q} dlq={dlq} />;
