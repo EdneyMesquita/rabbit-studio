@@ -144,6 +144,7 @@ export default function VhostsSection({ cid, tab, shown }: SectionProps) {
     async (r: VhostRow) => {
       const ok = await confirmDestructive(cid, {
         title: `Delete virtual host ${r.name}`,
+        guard: r.name,
         message: `Every queue, exchange, binding, policy and message in ${r.name} is deleted, and its connections are closed. This cannot be undone.`,
         confirmLabel: "Delete virtual host",
       });

@@ -170,6 +170,7 @@ export default function MessagesPanel({
       if (mode !== "peek") {
         const ok = await confirmDestructive(cid, {
           title: mode === "ack" ? `Take ${n} messages from ${name}?` : `Reject ${n} messages of ${name}?`,
+          guard: name,
           message:
             (mode === "ack"
               ? "Get (ack) removes every message it reads from the queue."
@@ -249,6 +250,7 @@ export default function MessagesPanel({
     async (rows: Row[]) => {
       const ok = await confirmDestructive(cid, {
         title: rows.length === 1 ? "Delete this message?" : `Delete ${rows.length} messages?`,
+        guard: name,
         message: `${rows.length === 1 ? "The message is" : "They are"} taken off ${name} and acknowledged, so the broker forgets ${rows.length === 1 ? "it" : "them"}. This cannot be undone.`,
         confirmLabel: rows.length === 1 ? "Delete message" : `Delete ${rows.length} messages`,
       });

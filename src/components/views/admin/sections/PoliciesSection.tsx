@@ -63,6 +63,7 @@ export default function PoliciesSection({ cid, tab, shown }: SectionProps) {
     async (p: Policy) => {
       const ok = await confirmDestructive(cid, {
         title: `Delete ${operator ? "operator " : ""}policy ${p.name}`,
+        guard: p.name,
         message: `Queues and exchanges in ${p.vhost} matching ${p.pattern} lose what this policy gave them, immediately.`,
         confirmLabel: "Delete policy",
       });

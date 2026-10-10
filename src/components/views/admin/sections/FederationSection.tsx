@@ -66,6 +66,7 @@ export default function FederationSection({ cid, tab, shown }: SectionProps) {
     async (p: Parameter, what: "upstream" | "upstream set") => {
       const ok = await confirmDestructive(cid, {
         title: `Delete ${what} ${p.name}`,
+        guard: p.name,
         message: `Federation links that use ${p.name} in ${p.vhost} stop.`,
         confirmLabel: `Delete ${what}`,
       });

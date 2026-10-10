@@ -137,6 +137,7 @@ export default function UsersSection({ cid, tab, shown }: SectionProps) {
       const mine = me && names.includes(me);
       const ok = await confirmDestructive(cid, {
         title: names.length === 1 ? `Delete user ${names[0]}` : `Delete ${names.length} users`,
+        guard: names.length === 1 ? names[0] : undefined,
         message:
           (names.length === 1
             ? `${names[0]} and its permissions are removed; its connections are closed.`

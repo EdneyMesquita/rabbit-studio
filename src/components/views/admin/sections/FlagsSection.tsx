@@ -40,7 +40,9 @@ async function load(cid: string): Promise<Loaded> {
 
 const flagKey = (x: { name: string }) => x.name;
 const flagTone = (state: string): Tone => (state === "enabled" ? "ok" : state === "disabled" ? "idle" : "warn");
-const canEnable = (f: FeatureFlag) => f.state === "disabled" && f.stability === "stable";
+// Stable and experimental flags can be turned on (experimental ones with a
+// warning, as the mockup does); required ones are always on already.
+const canEnable = (f: FeatureFlag) => f.state === "disabled" && f.stability !== "required";
 
 export default function FlagsSection({ cid, shown }: SectionProps) {
   const live = useLive<Loaded>(`${cid}:admin:flags`, () => load(cid), { enabled: shown });
@@ -53,8 +55,9 @@ export default function FlagsSection({ cid, shown }: SectionProps) {
     async (f: FeatureFlag) => {
       const ok = await confirmDestructive(cid, {
         title: `Enable feature flag ${f.name}`,
-        message: `It is enabled on every node of the cluster at once and cannot be undone. Nodes that don't support it can no longer join the cluster.`,
+        message: `${f.stability === "experimental" ? "Experimental: it may change or be removed in later versions. " : ""}It is enabled on every node of the cluster at once and cannot be undone. Nodes that don't support it can no longer join the cluster.`,
         confirmLabel: "Enable",
+        guard: f.name,
       });
       if (ok) await mutate(cid, () => rabbit(cid).put(paths.featureFlagEnable(f.name), {}), "Feature flag enabled", f.name);
     },

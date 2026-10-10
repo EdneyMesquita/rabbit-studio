@@ -29,10 +29,11 @@ export default function DeleteExchangeDialog({ context, onClose }: DialogProps) 
 
   const remove = async () => {
     setError(null);
-    // This dialog is the question; only a guarded connection asks again, for its name.
+    // This dialog is the question; only a guarded connection asks again, for the exchange's name.
     if (guarded) {
       const ok = await confirmDestructive(connectionId, {
         title: "Delete exchange",
+        guard: name,
         message: `Delete exchange ${name} in ${vhost}? Its bindings go with it and messages published to it are dropped.`,
         confirmLabel: "Delete",
       });

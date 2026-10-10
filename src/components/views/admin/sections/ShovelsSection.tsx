@@ -87,6 +87,7 @@ export default function ShovelsSection({ cid, tab, shown }: SectionProps) {
     async (r: ShovelRow) => {
       const ok = await confirmDestructive(cid, {
         title: `Delete shovel ${r.name}`,
+        guard: r.name,
         message: `${r.name} in ${r.vhost} stops moving messages and is removed. Messages already moved stay where they are.`,
         confirmLabel: "Delete shovel",
       });
