@@ -1,6 +1,5 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import {
-  Activity,
   ArrowLeftRight,
   Download,
   FileJson,
@@ -10,9 +9,7 @@ import {
   Inbox,
   Layers,
   Plug,
-  Radio,
   Shield,
-  Split,
   Users,
   Workflow,
 } from "lucide-react";
@@ -20,8 +17,9 @@ import type { LucideIcon } from "lucide-react";
 import { TimeSeriesChart, rateSamples, samplesOf } from "@/components/charts/TimeSeriesChart";
 import { DataTable, type Column } from "@/components/data/DataTable";
 import { Inspector } from "@/components/data/Inspector";
-import { ErrorState, KeyValues, Loading, Metrics, Notice, SectionHeader, StateLabel, ViewTitle, ViewToolbar, type MetricItem } from "@/components/data/parts";
+import { ErrorState, KeyValues, Loading, Metrics, Notice, SectionHeader, Spacer, StateLabel, ViewToolbar, type MetricItem, Dash } from "@/components/data/parts";
 import { Button } from "@/components/ui/button";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useLive } from "@/hooks/useLive";
 import { rabbit } from "@/lib/rabbit/client";
 import { compact, int, rate, shortNode } from "@/lib/rabbit/format";
@@ -72,8 +70,11 @@ const topColumns: Column<Queue>[] = [
   { id: "out", header: "out", align: "right", width: 80, cell: (q) => <RateCell rate={q.message_stats?.deliver_get_details?.rate} /> },
 ];
 
+type Mode = "overview" | "nodes";
+
 export default function ClusterOverview({ tab, shown }: ViewProps) {
   const cid = connectionIdOf(tab);
+  const [mode, setMode] = useState<Mode>("overview");
   // Sampled every 10 s: the charts have no finer grain.
   const overview = useLive<Overview>(
     `${cid}:overview`,
@@ -131,43 +132,29 @@ export default function ClusterOverview({ tab, shown }: ViewProps) {
   const objects = o.object_totals;
   const up = nodeList.filter((n) => n.running !== false).length;
   const withoutConsumers = (inputs.data?.queues ?? []).filter((q) => q.type !== "stream" && (q.consumers ?? 0) === 0 && (q.messages_ready ?? 0) > 0).length;
+  // One row of six: the rest of the counts live in the inspector.
   const metrics: MetricItem[] = [
-    { label: "Ready", value: compact(totals?.messages_ready), detail: `${int(totals?.messages_unacknowledged)} unacked`, onClick: go("queues"), title: "Open queues" },
+    { label: "Ready", value: compact(totals?.messages_ready), detail: "across all queues", onClick: go("queues"), title: "Open queues" },
+    { label: "Unacked", value: compact(totals?.messages_unacknowledged), detail: "delivered, not acked", onClick: go("queues"), title: "Open queues" },
     { label: "Publish", value: rate(o.message_stats?.publish_details?.rate), detail: `confirm ${rate(o.message_stats?.confirm_details?.rate)}` },
     { label: "Deliver", value: rate(o.message_stats?.deliver_get_details?.rate), detail: `ack ${rate(o.message_stats?.ack_details?.rate)}` },
-    { label: "Connections", icon: Plug, value: int(objects?.connections), onClick: go("connections"), title: "Open connections" },
-    { label: "Channels", icon: Radio, value: int(objects?.channels), onClick: go("channels"), title: "Open channels" },
-    { label: "Exchanges", icon: Split, value: int(objects?.exchanges), onClick: go("exchanges"), title: "Open exchanges" },
-    { label: "Queues", icon: Inbox, value: int(objects?.queues), onClick: go("queues"), title: "Open queues" },
-    {
-      label: "Consumers",
-      value: int(objects?.consumers),
-      detail: withoutConsumers ? `${withoutConsumers} queues hold messages without` : undefined,
-      tone: withoutConsumers ? "warn" : undefined,
-      onClick: go("queues"),
-    },
-    {
-      label: "Nodes",
-      value: nodeList.length ? `${up} / ${nodeList.length}` : "–",
-      detail: up < nodeList.length ? `${nodeList.length - up} down` : "all up",
-      tone: nodeList.length && up < nodeList.length ? "crit" : undefined,
-      onClick: go("nodes"),
-      title: "Open nodes",
-    },
-    {
-      label: "Alarms",
-      value: int(alarms.filter((a) => a.severity === "crit").length),
-      detail: alarms.length ? "see nodes" : "none",
-      tone: alarms.some((a) => a.severity === "crit") ? "crit" : undefined,
-      onClick: go("nodes"),
-    },
+    { label: "Connections", icon: Plug, value: int(objects?.connections), detail: `${int(objects?.channels)} channels`, onClick: go("connections"), title: "Open connections" },
+    { label: "Queues", icon: Inbox, value: int(objects?.queues), detail: `${int(objects?.exchanges)} exchanges`, onClick: go("queues"), title: "Open queues" },
   ];
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-editor">
       <ViewToolbar>
-        <ViewTitle icon={Activity} name={o.cluster_name} kind={`RabbitMQ ${o.rabbitmq_version}${o.erlang_version ? ` · Erlang ${o.erlang_version}` : ""}`} />
-        <div className="flex-1" />
+        <SegmentedControl<Mode>
+          aria-label="Cluster view"
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: "overview", label: "Overview" },
+            { value: "nodes", label: "Nodes" },
+          ]}
+        />
+        <Spacer />
         <Button variant="ghost" onClick={() => openOn(cid, { kind: "admin", section: "definitions" })}>
           <Download />
           Export definitions
@@ -198,35 +185,44 @@ export default function ClusterOverview({ tab, shown }: ViewProps) {
               {dead.length > 3 ? ", ..." : ""}
             </Notice>
           )}
-          <Metrics items={metrics} />
-          <div className="grid shrink-0 grid-cols-2 border-b border-line max-[1180px]:grid-cols-1">
-            <section className="min-w-0 border-r border-line max-[1180px]:border-r-0 max-[1180px]:border-b">
-              <SectionHeader actions={<span className="font-normal normal-case">all queues</span>}>Queued messages</SectionHeader>
-              <div className="px-3 pt-1 pb-3">
-                <TimeSeriesChart series={series.depth} height={120} format={compact} label="Queued messages, last 10 minutes" />
+          {mode === "overview" ? (
+            <>
+              <Metrics items={metrics} />
+              <div className="grid shrink-0 grid-cols-2 border-b border-line max-[1180px]:grid-cols-1">
+                <section className="min-w-0 border-r border-line max-[1180px]:border-r-0 max-[1180px]:border-b">
+                  <SectionHeader actions={<span className="font-normal">all queues</span>}>Queued messages</SectionHeader>
+                  <div className="px-3 pt-1 pb-3">
+                    <TimeSeriesChart series={series.depth} height={120} format={compact} label="Queued messages, last 10 minutes" />
+                  </div>
+                </section>
+                <section className="min-w-0">
+                  <SectionHeader actions={<span className="font-normal">msg/s</span>}>Message rates</SectionHeader>
+                  <div className="px-3 pt-1 pb-3">
+                    <TimeSeriesChart series={series.rates} height={120} format={rate} label="Message rates, last 10 minutes" />
+                  </div>
+                </section>
               </div>
-            </section>
-            <section className="min-w-0">
-              <SectionHeader actions={<span className="font-normal normal-case">msg/s</span>}>Message rates</SectionHeader>
-              <div className="px-3 pt-1 pb-3">
-                <TimeSeriesChart series={series.rates} height={120} format={rate} label="Message rates, last 10 minutes" />
-              </div>
-            </section>
-          </div>
-          <SectionHeader actions={<span className="font-mono">{nodeList.length}</span>}>Nodes</SectionHeader>
-          <NodeTable rows={nodeList} onOpen={(n) => openOn(cid, { kind: "nodes", focus: n.name })} />
-          <SectionHeader>Largest queues</SectionHeader>
-          <DataTable
-            aria-label="Largest queues"
-            rows={top.data ?? []}
-            columns={topColumns}
-            rowKey={(q) => `${q.vhost}\u0000${q.name}`}
-            onOpen={(q) => openOn(cid, { kind: "queue", vhost: q.vhost, name: q.name })}
-            className="flex-none overflow-x-auto"
-            empty="No queues yet."
-          />
+              <SectionHeader count={nodeList.length}>Nodes</SectionHeader>
+              <NodeTable rows={nodeList} onOpen={(n) => openOn(cid, { kind: "nodes", focus: n.name })} />
+              <SectionHeader>Largest queues</SectionHeader>
+              <DataTable
+                aria-label="Largest queues"
+                rows={top.data ?? []}
+                columns={topColumns}
+                rowKey={(q) => `${q.vhost}\u0000${q.name}`}
+                onOpen={(q) => openOn(cid, { kind: "queue", vhost: q.vhost, name: q.name })}
+                className="flex-none overflow-x-auto"
+                empty="No queues yet."
+              />
+            </>
+          ) : (
+            <>
+              <SectionHeader count={nodeList.length}>Nodes</SectionHeader>
+              <NodeTable rows={nodeList} onOpen={(n) => openOn(cid, { kind: "nodes", focus: n.name })} />
+            </>
+          )}
         </div>
-        <ClusterInspector cid={cid} overview={o} problems={problems} />
+        <ClusterInspector cid={cid} overview={o} problems={problems} nodes={{ up, total: nodeList.length }} consumers={{ total: objects?.consumers, without: withoutConsumers }} />
       </div>
     </div>
   );
@@ -236,23 +232,48 @@ const ClusterInspector = memo(function ClusterInspector({
   cid,
   overview: o,
   problems,
+  nodes,
+  consumers,
 }: {
   cid: string;
   overview: Overview;
   problems: ReturnType<typeof clusterProblems>;
+  nodes: { up: number; total: number };
+  consumers: { total?: number; without: number };
 }) {
+  const alarms = problems.filter((p) => p.target.kind === "nodes");
+  const link = (label: string, kind: "nodes" | "queues" | "exchanges" | "channels") => (
+    <button type="button" className="text-accent-text hover:underline" onClick={() => openOn(cid, { kind })}>
+      {label}
+    </button>
+  );
   return (
-    <Inspector label="Cluster" title="Cluster" subtitle={o.cluster_name}>
+    <Inspector
+      label="Cluster"
+      title={o.cluster_name}
+      subtitle={`RabbitMQ ${o.rabbitmq_version}${o.erlang_version ? ` · Erlang ${o.erlang_version}` : ""}`}
+    >
       <KeyValues
         rows={[
           ["cluster", o.cluster_name],
           ["rabbitmq", o.rabbitmq_version],
-          ["erlang", o.erlang_version ?? "–"],
-          ["management", o.management_version ?? "–"],
+          ["erlang", o.erlang_version ?? <Dash />],
+          ["management", o.management_version ?? <Dash />],
           ["answered by", shortNode(o.node)],
+          ["channels", link(int(o.object_totals?.channels), "channels")],
+          ["exchanges", link(int(o.object_totals?.exchanges), "exchanges")],
+          [
+            "consumers",
+            <span key="c" className={consumers.without ? "text-warn" : undefined} title={consumers.without ? `${consumers.without} queues hold messages without` : undefined}>
+              {int(consumers.total)}
+              {consumers.without ? ` · ${consumers.without} queues without` : ""}
+            </span>,
+          ],
+          ["nodes", nodes.total ? link(`${nodes.up} / ${nodes.total} up`, "nodes") : <Dash key="n" />],
+          ["alarms", alarms.length ? <span key="a" className="text-danger">{alarms.length}</span> : <Dash key="a" />],
         ]}
       />
-      <SectionHeader actions={<span className="font-mono">{problems.length}</span>}>Problems</SectionHeader>
+      <SectionHeader count={problems.length}>Problems</SectionHeader>
       {problems.length ? <ProblemList connectionId={cid} problems={problems} /> : <p className="px-3 py-2 text-sm text-fg-3">Nothing needs attention.</p>}
       <SectionHeader>Administration</SectionHeader>
       <div>

@@ -1,9 +1,9 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Split } from "lucide-react";
+import { TypedTree } from "@/components/data/TypedTree";
 import { DataTable, type Column, type SortState } from "@/components/data/DataTable";
 import { Inspector } from "@/components/data/Inspector";
-import { JsonView } from "@/components/data/JsonView";
-import { ErrorState, FilterField, KeyValues, Loading, SectionHeader, Spacer, Tag, ViewTitle, ViewToolbar } from "@/components/data/parts";
+import { ErrorState, FilterField, KeyValues, Loading, SectionHeader, Spacer, Tag, ViewTitle, ViewToolbar, Dash } from "@/components/data/parts";
 import type { MenuEntry } from "@/components/common/ActionMenu";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -143,7 +143,7 @@ export default function ExchangesView({ tab, shown }: ViewProps) {
         </label>
         <Spacer />
         {!readOnly && (
-          <Button variant="primary" onClick={() => openDialog("create-exchange", { connectionId: cid, vhost })}>
+          <Button variant="secondary" onClick={() => openDialog("create-exchange", { connectionId: cid, vhost })}>
             <Plus />
             New exchange
           </Button>
@@ -218,7 +218,7 @@ const ExchangeInspector = memo(function ExchangeInspector({
           ["durable", String(e.durable)],
           ["auto-delete", String(e.auto_delete)],
           ["internal", String(e.internal)],
-          ["policy", e.policy ?? "–"],
+          ["policy", e.policy ?? <Dash />],
           ["publish in", <RateCell key="i" rate={e.message_stats?.publish_in_details?.rate} />],
           ["publish out", <RateCell key="o" rate={e.message_stats?.publish_out_details?.rate} />],
         ]}
@@ -226,9 +226,7 @@ const ExchangeInspector = memo(function ExchangeInspector({
       {Object.keys(args).length > 0 && (
         <>
           <SectionHeader>Arguments</SectionHeader>
-          <div className="px-3 py-2">
-            <JsonView value={args} />
-          </div>
+          <TypedTree value={args} open={1} />
         </>
       )}
       <SectionHeader>Go to</SectionHeader>

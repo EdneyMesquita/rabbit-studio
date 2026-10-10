@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Flag } from "lucide-react";
 import { DataTable, type Column } from "@/components/data/DataTable";
 import { Inspector } from "@/components/data/Inspector";
-import { ErrorState, FilterField, KeyValues, Loading, Notice, SectionHeader, Spacer, StateLabel, Tag, ViewTitle, ViewToolbar, type Tone } from "@/components/data/parts";
+import { ErrorState, FilterField, KeyValues, Loading, Notice, SectionHeader, Spacer, StateLabel, Tag, ViewTitle, ViewToolbar, type Tone, Dash } from "@/components/data/parts";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useLive } from "@/hooks/useLive";
@@ -74,11 +74,11 @@ export default function FlagsSection({ cid, shown }: SectionProps) {
 
   const flagColumns = useMemo<Column<FeatureFlag>[]>(
     () => [
-      { id: "name", header: "Name", width: 270, cell: (f) => f.name, sortValue: (f) => f.name },
-      { id: "state", header: "State", width: 120, mono: false, cell: (f) => <StateLabel tone={flagTone(f.state)}>{f.state}</StateLabel>, sortValue: (f) => f.state },
-      { id: "stability", header: "Stability", width: 110, cell: (f) => <Tag>{f.stability}</Tag>, sortValue: (f) => f.stability },
-      { id: "desc", header: "Description", mono: false, cell: (f) => <span className="text-fg-2">{f.desc}</span> },
-      { id: "by", header: "Provided by", width: 200, cell: (f) => f.provided_by, sortValue: (f) => f.provided_by },
+      { id: "name", header: "name", width: 270, cell: (f) => f.name, sortValue: (f) => f.name },
+      { id: "state", header: "state", width: 120, mono: false, cell: (f) => <StateLabel tone={flagTone(f.state)}>{f.state}</StateLabel>, sortValue: (f) => f.state },
+      { id: "stability", header: "stability", width: 110, cell: (f) => <Tag>{f.stability}</Tag>, sortValue: (f) => f.stability },
+      { id: "desc", header: "description", mono: false, cell: (f) => <span className="text-fg-2">{f.desc}</span> },
+      { id: "by", header: "provided by", width: 200, cell: (f) => f.provided_by, sortValue: (f) => f.provided_by },
       {
         id: "enable",
         header: "",
@@ -96,11 +96,11 @@ export default function FlagsSection({ cid, shown }: SectionProps) {
   );
   const deprecatedColumns = useMemo<Column<Deprecated>[]>(
     () => [
-      { id: "name", header: "Name", width: 270, cell: (d) => d.name, sortValue: (d) => d.name },
-      { id: "phase", header: "Phase", width: 190, cell: (d) => d.deprecation_phase ?? "–", sortValue: (d) => d.deprecation_phase },
-      { id: "state", header: "State", width: 120, mono: false, cell: (d) => (d.state ? <StateLabel tone={d.state === "permitted" ? "warn" : "idle"}>{d.state.replace("_", " ")}</StateLabel> : "–"), sortValue: (d) => d.state },
-      { id: "desc", header: "Description", mono: false, cell: (d) => <span className="text-fg-2">{d.desc || "–"}</span> },
-      { id: "by", header: "Provided by", width: 200, cell: (d) => d.provided_by ?? "–", sortValue: (d) => d.provided_by },
+      { id: "name", header: "name", width: 270, cell: (d) => d.name, sortValue: (d) => d.name },
+      { id: "phase", header: "phase", width: 190, cell: (d) => d.deprecation_phase ?? <Dash />, sortValue: (d) => d.deprecation_phase },
+      { id: "state", header: "state", width: 120, mono: false, cell: (d) => (d.state ? <StateLabel tone={d.state === "permitted" ? "warn" : "idle"}>{d.state.replace("_", " ")}</StateLabel> : <Dash />), sortValue: (d) => d.state },
+      { id: "desc", header: "description", mono: false, cell: (d) => <span className="text-fg-2">{d.desc || <Dash />}</span> },
+      { id: "by", header: "provided by", width: 200, cell: (d) => d.provided_by ?? <Dash />, sortValue: (d) => d.provided_by },
     ],
     [],
   );
@@ -173,9 +173,9 @@ function FlagInspector({ flag, readOnly, onEnable }: { flag: FeatureFlag; readOn
     <Inspector label="Feature flag" title={flag.name} subtitle="Feature flag">
       <KeyValues
         rows={[
-          ["State", <StateLabel key="s" tone={flagTone(flag.state)}>{flag.state}</StateLabel>],
-          ["Stability", flag.stability],
-          ["Provided by", flag.provided_by],
+          ["state", <StateLabel key="s" tone={flagTone(flag.state)}>{flag.state}</StateLabel>],
+          ["stability", flag.stability],
+          ["provided by", flag.provided_by],
           ...(flag.doc_url ? ([["Docs", flag.doc_url]] as [string, string][]) : []),
         ]}
       />

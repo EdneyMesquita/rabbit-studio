@@ -60,6 +60,7 @@ export const ClusterProblemList = memo(function ClusterProblemList({ items }: { 
           <ConnectionChip name={c.cluster} color={c.color} size="dot" />
           <span className="shrink-0">{c.cluster} ·</span>
           <span className="truncate font-mono">{c.problem.object}</span>
+          <span className="truncate">· {c.problem.detail}</span>
         </RowButton>
       ))}
     </div>

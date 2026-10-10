@@ -76,19 +76,21 @@ export function queueProblem(q: ProblemQueue): Problem | null {
       : null;
   }
   if (consumers > 0 && ready >= LIMITS.backlog) {
-    return { ...base, severity: "crit", title: "Queue backing up", detail: `${ready.toLocaleString("en-US")} ready, ${consumers} consumers`, target: target("overview") };
+    return { ...base, severity: "crit", title: "Queue backing up", detail: `${ready.toLocaleString("en-US")} ready · above ${LIMITS.backlog.toLocaleString("en-US")}, ${consumers} consumers`, target: target("overview") };
   }
   if (consumers === 0 && ready >= LIMITS.noConsumersWarn) {
+    // Say which threshold decided the severity, so the same title never changes color unexplained.
+    const crit = ready >= LIMITS.noConsumersCrit;
     return {
       ...base,
-      severity: ready >= LIMITS.noConsumersCrit ? "crit" : "warn",
+      severity: crit ? "crit" : "warn",
       title: "No consumers",
-      detail: `${ready.toLocaleString("en-US")} messages waiting`,
+      detail: `${ready.toLocaleString("en-US")} waiting · above ${(crit ? LIMITS.noConsumersCrit : LIMITS.noConsumersWarn).toLocaleString("en-US")}`,
       target: target("overview"),
     };
   }
   if (n(q.messages_unacknowledged) >= LIMITS.unacked) {
-    return { ...base, severity: "warn", title: "Many unacknowledged", detail: `${n(q.messages_unacknowledged).toLocaleString("en-US")} unacked`, target: target("overview") };
+    return { ...base, severity: "warn", title: "Many unacknowledged", detail: `${n(q.messages_unacknowledged).toLocaleString("en-US")} unacked · above ${LIMITS.unacked.toLocaleString("en-US")}`, target: target("overview") };
   }
   return null;
 }

@@ -113,11 +113,11 @@ export default function LimitsSection({ cid, shown }: SectionProps) {
 
   const columns = useMemo<Column<LimitRow>[]>(
     () => [
-      { id: "scope", header: "Scope", width: 90, cell: (r) => r.scope, sortValue: (r) => r.scope },
-      { id: "target", header: "Target", width: 220, cell: (r) => r.target, sortValue: (r) => r.target },
-      { id: "limit", header: "Limit", width: 160, cell: (r) => r.limit, sortValue: (r) => r.limit },
-      { id: "value", header: "Max", align: "right", width: 90, cell: (r) => int(r.value), sortValue: (r) => r.value },
-      { id: "edit", header: "Change", mono: false, cell: (r) => <LimitCell cid={cid} row={r} readOnly={readOnly} /> },
+      { id: "scope", header: "scope", width: 90, cell: (r) => r.scope, sortValue: (r) => r.scope },
+      { id: "target", header: "target", width: 220, cell: (r) => r.target, sortValue: (r) => r.target },
+      { id: "limit", header: "limit", width: 160, cell: (r) => r.limit, sortValue: (r) => r.limit },
+      { id: "value", header: "max", align: "right", width: 90, cell: (r) => int(r.value), sortValue: (r) => r.value },
+      { id: "edit", header: "change", mono: false, cell: (r) => <LimitCell cid={cid} row={r} readOnly={readOnly} /> },
     ],
     [cid, readOnly],
   );
@@ -129,7 +129,7 @@ export default function LimitsSection({ cid, shown }: SectionProps) {
           <ViewTitle icon={Gauge} name="Limits" kind={`${int(live.data?.rows.length ?? 0)} set`} />
           <FilterField value={filter} onChange={setFilter} placeholder="Filter by target or limit" className="ml-2" />
           <Spacer />
-          <Button variant="primary" aria-pressed={adding} onClick={() => setAdding((a) => !a)} {...mutating(cid)}>
+          <Button variant="secondary" aria-pressed={adding} onClick={() => setAdding((a) => !a)} {...mutating(cid)}>
             <Plus />
             New limit
           </Button>

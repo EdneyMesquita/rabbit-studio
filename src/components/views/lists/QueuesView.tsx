@@ -1,11 +1,12 @@
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Inbox, Plus, Waves } from "lucide-react";
 import { toast } from "sonner";
+import { TypedTree } from "@/components/data/TypedTree";
 import { DataTable, type Column, type SortState } from "@/components/data/DataTable";
 import { Inspector } from "@/components/data/Inspector";
-import { JsonView } from "@/components/data/JsonView";
 import {
   EmptyState,
+  Dash,
   ErrorState,
   FilterField,
   KeyValues,
@@ -16,6 +17,7 @@ import {
   Tag,
   ViewTitle,
   ViewToolbar,
+  KeyHints,
 } from "@/components/data/parts";
 import { TimeSeriesChart, samplesOf } from "@/components/charts/TimeSeriesChart";
 import type { MenuEntry } from "@/components/common/ActionMenu";
@@ -225,6 +227,16 @@ export default function QueuesView({ tab, shown }: ViewProps) {
     return k ? visible.find((q) => keyOf(q) === k) ?? null : null;
   }, [selected, lastKey, visible]);
 
+  // The inspector opens on the first row, as if the list had a cursor.
+  const autoSelected = useRef(false);
+  useEffect(() => {
+    if (autoSelected.current || tab.focus || selected.size > 0 || !visible.length) return;
+    autoSelected.current = true;
+    const k = keyOf(visible[0]);
+    setSelected(new Set([k]));
+    setLastKey(k);
+  }, [visible, selected, tab.focus]);
+
   const openQueue = useCallback(
     (q: Queue, view?: string) => openOn(cid, { kind: "queue", vhost: q.vhost, name: q.name, view }),
     [cid],
@@ -324,7 +336,7 @@ export default function QueuesView({ tab, shown }: ViewProps) {
         </ToggleButton>
         <Spacer />
         {!readOnly && (
-          <Button variant="primary" onClick={() => openDialog("create-queue", { connectionId: cid, vhost, data: stream ? { type: "stream" } : undefined })}>
+          <Button variant="secondary" onClick={() => openDialog("create-queue", { connectionId: cid, vhost, data: stream ? { type: "stream" } : undefined })}>
             <Plus />
             {stream ? "New stream" : "New queue"}
           </Button>
@@ -345,7 +357,15 @@ export default function QueuesView({ tab, shown }: ViewProps) {
         pager={<Pager page={info.page} pageCount={info.pageCount} onPage={setPage} />}
       />
       <div className="flex min-h-0 flex-1">
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div
+          className="flex min-w-0 flex-1 flex-col"
+          onKeyDown={(e) => {
+            if (e.key !== "Delete" || selected.size !== 1 || !current || readOnly || current.type === "stream" || !current.messages_ready) return;
+            if ((e.target as HTMLElement).closest("input, textarea")) return;
+            e.preventDefault();
+            openDialog("purge-queue", { connectionId: cid, vhost: current.vhost, name: current.name });
+          }}
+        >
           {error && !fresh && rows.length === 0 ? (
             <ErrorState error={error} onRetry={() => void refresh()} />
           ) : !fresh && rows.length === 0 ? (
@@ -450,16 +470,14 @@ const QueueInspector = memo(function QueueInspector({
           ["deliver", <RateCell key="d" rate={q.message_stats?.deliver_get_details?.rate} />],
           ["ack", <RateCell key="a" rate={q.message_stats?.ack_details?.rate} />],
           [isStream ? "leader" : "node", shortNode(q.leader ?? q.node)],
-          ["policy", q.policy ?? "–"],
+          ["policy", q.policy ?? <Dash />],
           ["memory", bytes(q.memory)],
         ]}
       />
       {Object.keys(args).length > 0 && (
         <>
           <SectionHeader>Arguments</SectionHeader>
-          <div className="px-3 py-2">
-            <JsonView value={args} />
-          </div>
+          <TypedTree value={args} open={1} />
         </>
       )}
       <SectionHeader>Go to</SectionHeader>
@@ -483,6 +501,10 @@ const QueueInspector = memo(function QueueInspector({
             Delete…
           </Button>
         )}
+      </div>
+      {/* The scroller is the Inspector's, so the hints stick to its bottom. */}
+      <div className="sticky bottom-0 bg-editor">
+        <KeyHints hints={[["Open", "⏎"], ...(!readOnly && !isStream ? ([["Purge", "Del"]] as [string, string][]) : [])]} />
       </div>
     </Inspector>
   );

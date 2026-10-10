@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import { Globe, Pencil, Plus, Trash2 } from "lucide-react";
+import { TypedTree } from "@/components/data/TypedTree";
 import { DataTable, type Column } from "@/components/data/DataTable";
 import { Inspector } from "@/components/data/Inspector";
-import { JsonView } from "@/components/data/JsonView";
-import { ErrorState, FilterField, KeyValues, Loading, SectionHeader, Spacer, StateLabel, ViewTitle, ViewToolbar } from "@/components/data/parts";
+import { ErrorState, FilterField, KeyValues, Loading, SectionHeader, Spacer, StateLabel, ViewTitle, ViewToolbar, Dash } from "@/components/data/parts";
 import type { MenuEntry } from "@/components/common/ActionMenu";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -78,47 +78,47 @@ export default function FederationSection({ cid, tab, shown }: SectionProps) {
 
   const upstreamColumns = useMemo<Column<Parameter>[]>(
     () => [
-      { id: "name", header: "Name", width: 190, cell: (p) => p.name, sortValue: (p) => p.name },
-      { id: "vhost", header: "Vhost", width: 120, cell: (p) => <span className="text-fg-2">{p.vhost}</span>, sortValue: (p) => p.vhost },
+      { id: "name", header: "name", width: 190, cell: (p) => p.name, sortValue: (p) => p.name },
+      { id: "vhost", header: "vhost", width: 120, cell: (p) => <span className="text-fg-2">{p.vhost}</span>, sortValue: (p) => p.vhost },
       {
         id: "uri",
-        header: "URI",
+        header: "uri",
         cell: (p) => {
           const u = uriList(val(p, "uri"));
-          return u.length ? `${maskUri(u[0])}${u.length > 1 ? `  +${u.length - 1}` : ""}` : "–";
+          return u.length ? `${maskUri(u[0])}${u.length > 1 ? `  +${u.length - 1}` : ""}` : <Dash />;
         },
       },
-      { id: "ack", header: "Ack mode", width: 100, cell: (p) => String(val(p, "ack-mode") ?? "on-confirm") },
-      { id: "prefetch", header: "Prefetch", align: "right", width: 80, cell: (p) => int(val(p, "prefetch-count") as number | undefined), sortValue: (p) => val(p, "prefetch-count") as number | undefined },
-      { id: "hops", header: "Max hops", align: "right", width: 80, cell: (p) => int(val(p, "max-hops") as number | undefined), sortValue: (p) => val(p, "max-hops") as number | undefined },
-      { id: "expires", header: "Expires", align: "right", width: 90, cell: (p) => int(val(p, "expires") as number | undefined), sortValue: (p) => val(p, "expires") as number | undefined },
-      { id: "trust", header: "Trust user-id", width: 100, cell: (p) => (val(p, "trust-user-id") ? "yes" : "no") },
+      { id: "ack", header: "ack mode", width: 100, cell: (p) => String(val(p, "ack-mode") ?? "on-confirm") },
+      { id: "prefetch", header: "prefetch", align: "right", width: 80, cell: (p) => int(val(p, "prefetch-count") as number | undefined), sortValue: (p) => val(p, "prefetch-count") as number | undefined },
+      { id: "hops", header: "max hops", align: "right", width: 80, cell: (p) => int(val(p, "max-hops") as number | undefined), sortValue: (p) => val(p, "max-hops") as number | undefined },
+      { id: "expires", header: "expires", align: "right", width: 90, cell: (p) => int(val(p, "expires") as number | undefined), sortValue: (p) => val(p, "expires") as number | undefined },
+      { id: "trust", header: "trust user-id", width: 100, cell: (p) => (val(p, "trust-user-id") ? "yes" : "no") },
     ],
     [],
   );
   const linkColumns = useMemo<Column<FederationLink>[]>(
     () => [
-      { id: "status", header: "Status", width: 110, mono: false, cell: (l) => <StateLabel tone={stateTone(l.status)}>{l.status}</StateLabel>, sortValue: (l) => l.status },
-      { id: "type", header: "Type", width: 80, cell: (l) => l.type, sortValue: (l) => l.type },
-      { id: "vhost", header: "Vhost", width: 110, cell: (l) => <span className="text-fg-2">{l.vhost}</span>, sortValue: (l) => l.vhost },
-      { id: "upstream", header: "Upstream", width: 160, cell: (l) => l.upstream, sortValue: (l) => l.upstream },
-      { id: "local", header: "Federated", width: 190, cell: (l) => l.exchange ?? l.queue ?? "–", sortValue: (l) => l.exchange ?? l.queue },
-      { id: "remote", header: "Upstream object", width: 190, cell: (l) => l.upstream_exchange ?? l.upstream_queue ?? "–" },
-      { id: "node", header: "Node", width: 100, cell: (l) => shortNode(l.node), sortValue: (l) => l.node },
-      { id: "uri", header: "URI", width: 230, cell: (l) => (l.uri ? maskUri(l.uri) : "–") },
-      { id: "since", header: "Since", width: 150, cell: (l) => l.timestamp ?? "–", sortValue: (l) => l.timestamp },
-      { id: "error", header: "Error", cell: (l) => (l.error ? <span className="text-danger">{l.error}</span> : "") },
+      { id: "status", header: "status", width: 110, mono: false, cell: (l) => <StateLabel tone={stateTone(l.status)}>{l.status}</StateLabel>, sortValue: (l) => l.status },
+      { id: "type", header: "type", width: 80, cell: (l) => l.type, sortValue: (l) => l.type },
+      { id: "vhost", header: "vhost", width: 110, cell: (l) => <span className="text-fg-2">{l.vhost}</span>, sortValue: (l) => l.vhost },
+      { id: "upstream", header: "upstream", width: 160, cell: (l) => l.upstream, sortValue: (l) => l.upstream },
+      { id: "local", header: "federated", width: 190, cell: (l) => l.exchange ?? l.queue ?? <Dash />, sortValue: (l) => l.exchange ?? l.queue },
+      { id: "remote", header: "upstream object", width: 190, cell: (l) => l.upstream_exchange ?? l.upstream_queue ?? <Dash /> },
+      { id: "node", header: "node", width: 100, cell: (l) => shortNode(l.node), sortValue: (l) => l.node },
+      { id: "uri", header: "uri", width: 230, cell: (l) => (l.uri ? maskUri(l.uri) : <Dash />) },
+      { id: "since", header: "since", width: 150, cell: (l) => l.timestamp ?? <Dash />, sortValue: (l) => l.timestamp },
+      { id: "error", header: "error", cell: (l) => (l.error ? <span className="text-danger">{l.error}</span> : "") },
     ],
     [],
   );
   const setColumns = useMemo<Column<Parameter>[]>(
     () => [
-      { id: "name", header: "Name", width: 190, cell: (p) => p.name, sortValue: (p) => p.name },
-      { id: "vhost", header: "Vhost", width: 120, cell: (p) => <span className="text-fg-2">{p.vhost}</span>, sortValue: (p) => p.vhost },
+      { id: "name", header: "name", width: 190, cell: (p) => p.name, sortValue: (p) => p.name },
+      { id: "vhost", header: "vhost", width: 120, cell: (p) => <span className="text-fg-2">{p.vhost}</span>, sortValue: (p) => p.vhost },
       {
         id: "members",
-        header: "Upstreams",
-        cell: (p) => (Array.isArray(p.value) ? (p.value as { upstream?: string }[]).map((m) => m.upstream).filter(Boolean).join(", ") : "–"),
+        header: "upstreams",
+        cell: (p) => (Array.isArray(p.value) ? (p.value as { upstream?: string }[]).map((m) => m.upstream).filter(Boolean).join(", ") : <Dash />),
       },
     ],
     [],
@@ -166,7 +166,7 @@ export default function FederationSection({ cid, tab, shown }: SectionProps) {
           )}
           <FilterField value={filter} onChange={setFilter} className="ml-1" />
           <Spacer />
-          <Button variant="primary" onClick={() => openDialog("create-upstream", { connectionId: cid })} {...mutating(cid)} disabled={readOnly || data === null}>
+          <Button variant="secondary" onClick={() => openDialog("create-upstream", { connectionId: cid })} {...mutating(cid)} disabled={readOnly || data === null}>
             <Plus />
             New upstream
           </Button>
@@ -187,7 +187,7 @@ export default function FederationSection({ cid, tab, shown }: SectionProps) {
           }>
             <KeyValues rows={[["Vhost", upstream.vhost]]} />
             <SectionHeader>Definition</SectionHeader>
-            <JsonView value={maskDeep(upstream.value)} defaultDepth={3} className="px-3 pb-2" />
+            <TypedTree value={maskDeep(upstream.value) as Record<string, unknown>} open={3} />
             <SectionHeader>Links · {(data?.links ?? []).filter((l) => l.vhost === upstream.vhost && l.upstream === upstream.name).length}</SectionHeader>
             <div className="pb-2">
               {(data?.links ?? [])
@@ -205,13 +205,13 @@ export default function FederationSection({ cid, tab, shown }: SectionProps) {
           <Inspector label="Link" title={link.exchange ?? link.queue ?? link.upstream} subtitle={`${link.type} link via ${link.upstream}`}>
             <KeyValues
               rows={[
-                ["Status", <StateLabel key="s" tone={stateTone(link.status)}>{link.status}</StateLabel>],
-                ["Vhost", link.vhost],
-                ["Upstream", link.upstream],
-                ["Node", shortNode(link.node)],
-                ["URI", link.uri ? maskUri(link.uri) : "–"],
-                ["Upstream object", link.upstream_exchange ?? link.upstream_queue ?? "–"],
-                ["Since", link.timestamp ?? "–"],
+                ["status", <StateLabel key="s" tone={stateTone(link.status)}>{link.status}</StateLabel>],
+                ["vhost", link.vhost],
+                ["upstream", link.upstream],
+                ["node", shortNode(link.node)],
+                ["uri", link.uri ? maskUri(link.uri) : <Dash />],
+                ["upstream object", link.upstream_exchange ?? link.upstream_queue ?? <Dash />],
+                ["since", link.timestamp ?? <Dash />],
               ]}
             />
             {link.error && (
@@ -230,7 +230,7 @@ export default function FederationSection({ cid, tab, shown }: SectionProps) {
           }>
             <KeyValues rows={[["Vhost", set.vhost]]} />
             <SectionHeader>Definition</SectionHeader>
-            <JsonView value={set.value} defaultDepth={3} className="px-3 pb-2" />
+            <TypedTree value={set.value} open={3} />
           </Inspector>
         ) : null
       }

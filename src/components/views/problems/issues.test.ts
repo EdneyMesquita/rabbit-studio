@@ -32,6 +32,10 @@ describe("queueProblem", () => {
     expect(queueProblem(q({ messages_ready: 300, consumers: 0 }))?.severity).toBe("warn");
     expect(queueProblem(q({ messages_ready: 3120, consumers: 0 }))?.severity).toBe("crit");
   });
+  it("shows the threshold behind the severity", () => {
+    expect(queueProblem(q({ messages_ready: 596, consumers: 0 }))?.detail).toBe("596 waiting · above 100");
+    expect(queueProblem(q({ messages_ready: 3120, consumers: 0 }))?.detail).toBe("3,120 waiting · above 1,000");
+  });
   it("sends a dead-letter queue to its messages", () => {
     const p = queueProblem(q({ name: "payments.dlq", vhost: "payments", messages_ready: 4, consumers: 0 }));
     expect(p?.severity).toBe("warn");

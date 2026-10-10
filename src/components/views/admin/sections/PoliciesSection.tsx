@@ -1,8 +1,8 @@
 import { memo, useCallback, useMemo, useState } from "react";
 import { Inbox, Pencil, Plus, Shield, Split, Trash2 } from "lucide-react";
+import { TypedTree } from "@/components/data/TypedTree";
 import { DataTable, type Column } from "@/components/data/DataTable";
 import { Inspector } from "@/components/data/Inspector";
-import { JsonView } from "@/components/data/JsonView";
 import { ErrorState, FilterField, KeyValues, Loading, SectionHeader, Spacer, ViewTitle, ViewToolbar } from "@/components/data/parts";
 import type { MenuEntry } from "@/components/common/ActionMenu";
 import { Button } from "@/components/ui/button";
@@ -47,12 +47,12 @@ export default function PoliciesSection({ cid, tab, shown }: SectionProps) {
 
   const columns = useMemo<Column<Policy>[]>(
     () => [
-      { id: "vhost", header: "Vhost", width: 130, cell: (p) => <span className="text-fg-2">{p.vhost}</span>, sortValue: (p) => p.vhost },
-      { id: "name", header: "Name", width: 190, cell: (p) => p.name, sortValue: (p) => p.name },
-      { id: "pattern", header: "Pattern", width: 220, cell: (p) => <span className="text-json-string">{p.pattern}</span>, sortValue: (p) => p.pattern },
-      { id: "apply", header: "Apply to", width: 120, cell: (p) => p["apply-to"], sortValue: (p) => p["apply-to"] },
-      { id: "priority", header: "Priority", align: "right", width: 80, cell: (p) => p.priority, sortValue: (p) => p.priority },
-      { id: "definition", header: "Definition", cell: (p) => definitionSummary(p.definition) },
+      { id: "vhost", header: "vhost", width: 130, cell: (p) => <span className="text-fg-2">{p.vhost}</span>, sortValue: (p) => p.vhost },
+      { id: "name", header: "name", width: 190, cell: (p) => p.name, sortValue: (p) => p.name },
+      { id: "pattern", header: "pattern", width: 220, cell: (p) => <span className="text-json-string">{p.pattern}</span>, sortValue: (p) => p.pattern },
+      { id: "apply", header: "apply to", width: 120, cell: (p) => p["apply-to"], sortValue: (p) => p["apply-to"] },
+      { id: "priority", header: "priority", align: "right", width: 80, cell: (p) => p.priority, sortValue: (p) => p.priority },
+      { id: "definition", header: "definition", cell: (p) => definitionSummary(p.definition) },
     ],
     [],
   );
@@ -104,7 +104,7 @@ export default function PoliciesSection({ cid, tab, shown }: SectionProps) {
           />
           <FilterField value={filter} onChange={setFilter} placeholder="Filter by name, vhost or pattern" className="ml-1" />
           <Spacer />
-          <Button variant="primary" onClick={() => openDialog("create-policy", { connectionId: cid, data: { operator } })} {...mutating(cid)}>
+          <Button variant="secondary" onClick={() => openDialog("create-policy", { connectionId: cid, data: { operator } })} {...mutating(cid)}>
             <Plus />
             New {operator ? "operator policy" : "policy"}
           </Button>
@@ -201,14 +201,14 @@ const PolicyInspector = memo(function PolicyInspector({
     >
       <KeyValues
         rows={[
-          ["Vhost", policy.vhost],
-          ["Pattern", policy.pattern],
-          ["Apply to", policy["apply-to"]],
-          ["Priority", String(policy.priority)],
+          ["vhost", policy.vhost],
+          ["pattern", policy.pattern],
+          ["apply to", policy["apply-to"]],
+          ["priority", String(policy.priority)],
         ]}
       />
       <SectionHeader>Definition</SectionHeader>
-      <JsonView value={policy.definition} defaultDepth={3} className="px-3 pb-2" />
+      <TypedTree value={policy.definition} open={3} />
       <SectionHeader>{matches ? `Applies to · ${total}` : "Applies to"}</SectionHeader>
       <div className="pb-2">
         {cand.error && !cand.data ? (

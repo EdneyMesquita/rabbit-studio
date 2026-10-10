@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import { Cpu } from "lucide-react";
 import { Inspector } from "@/components/data/Inspector";
-import { ErrorState, KeyValues, Loading, Notice, SectionHeader, Spacer, Tag, ViewTitle, ViewToolbar } from "@/components/data/parts";
+import { ErrorState, KeyValues, Loading, Notice, SectionHeader, Spacer, Tag, ViewTitle, ViewToolbar, Dash } from "@/components/data/parts";
 import { useLive } from "@/hooks/useLive";
 import { rabbit } from "@/lib/rabbit/client";
 import { bytes, duration, int, percent } from "@/lib/rabbit/format";
@@ -95,8 +95,8 @@ const NodeInspector = memo(function NodeInspector({ cid, node, shown }: { cid: s
         rows={[
           ["state", node.running === false ? "down" : node.being_drained ? "draining" : "running"],
           ["uptime", duration(node.uptime)],
-          ["rabbitmq", detail.data?.rabbitmq_version ?? node.rabbitmq_version ?? "–"],
-          ["erlang", detail.data?.erlang_version ?? node.erlang_version ?? "–"],
+          ["rabbitmq", detail.data?.rabbitmq_version ?? node.rabbitmq_version ?? <Dash />],
+          ["erlang", detail.data?.erlang_version ?? node.erlang_version ?? <Dash />],
           ["cores", int(node.processors)],
           ["run queue", int(node.run_queue)],
           ["memory", `${bytes(node.mem_used)} of ${bytes(node.mem_limit)} (${percent(node.mem_limit ? (node.mem_used ?? 0) / node.mem_limit : undefined)})`],
@@ -104,8 +104,8 @@ const NodeInspector = memo(function NodeInspector({ cid, node, shown }: { cid: s
           ["file descriptors", `${int(node.fd_used)} / ${int(node.fd_total)}`],
           ["sockets", `${int(node.sockets_used)} / ${int(node.sockets_total)}`],
           ["erlang processes", `${int(node.proc_used)} / ${int(node.proc_total)}`],
-          ["partitions", node.partitions?.length ? node.partitions.join(", ") : "none"],
-          ["data dir", detail.data?.db_dir ?? "–"],
+          ["partitions", node.partitions?.length ? node.partitions.join(", ") : <Dash />],
+          ["data dir", detail.data?.db_dir ?? <Dash />],
         ]}
       />
       {parts.length > 0 && (

@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Radio } from "lucide-react";
 import { DataTable, type Column, type SortState } from "@/components/data/DataTable";
 import { Inspector } from "@/components/data/Inspector";
-import { ErrorState, FilterField, KeyValues, Loading, Spacer, StateLabel, Tag, ViewTitle, ViewToolbar, type Tone } from "@/components/data/parts";
+import { ErrorState, FilterField, KeyValues, Loading, Spacer, StateLabel, Tag, ViewTitle, ViewToolbar, type Tone, Dash } from "@/components/data/parts";
 import type { MenuEntry } from "@/components/common/ActionMenu";
 import { Button } from "@/components/ui/button";
 import { int } from "@/lib/rabbit/format";
@@ -66,7 +66,7 @@ const columns: Column<Channel>[] = [
     width: 64,
     cell: (ch) => (mode(ch) ? <span className="text-json-keyword">{mode(ch)}</span> : <span className="text-fg-3">–</span>),
   },
-  { id: "state", header: "state", width: 96, mono: false, cell: (ch) => <StateLabel tone={stateTone(ch.state)}>{ch.state ?? "–"}</StateLabel> },
+  { id: "state", header: "state", width: 96, mono: false, cell: (ch) => <StateLabel tone={stateTone(ch.state)}>{ch.state ?? <Dash />}</StateLabel> },
   { id: "prefetch", header: "prefetch", align: "right", width: 82, cell: (ch) => (ch.prefetch_count ? int(ch.prefetch_count) : <span className="text-fg-3">0</span>) },
   { id: "unacked", header: "unacked", align: "right", width: 82, cell: (ch) => <Zero n={ch.messages_unacknowledged} /> },
   { id: "unconfirmed", header: "unconfirmed", align: "right", width: 100, cell: (ch) => <Zero n={ch.messages_unconfirmed} /> },
@@ -177,7 +177,7 @@ const ChannelInspector = memo(function ChannelInspector({ ch, onConnection }: { 
       </div>
       <KeyValues
         rows={[
-          ["state", ch.state ?? "–"],
+          ["state", ch.state ?? <Dash />],
           ["user", ch.user],
           ["vhost", ch.vhost],
           ["node", ch.node],

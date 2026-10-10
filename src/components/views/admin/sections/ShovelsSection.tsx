@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import { Pencil, Plus, RotateCw, Trash2, Waypoints } from "lucide-react";
+import { TypedTree } from "@/components/data/TypedTree";
 import { DataTable, type Column } from "@/components/data/DataTable";
 import { Inspector } from "@/components/data/Inspector";
-import { JsonView } from "@/components/data/JsonView";
-import { ErrorState, FilterField, KeyValues, Loading, SectionHeader, Spacer, StateLabel, ViewTitle, ViewToolbar } from "@/components/data/parts";
+import { ErrorState, FilterField, KeyValues, Loading, SectionHeader, Spacer, StateLabel, ViewTitle, ViewToolbar, Dash } from "@/components/data/parts";
 import type { MenuEntry } from "@/components/common/ActionMenu";
 import { Button } from "@/components/ui/button";
 import { useLive } from "@/hooks/useLive";
@@ -97,14 +97,14 @@ export default function ShovelsSection({ cid, tab, shown }: SectionProps) {
 
   const columns = useMemo<Column<ShovelRow>[]>(
     () => [
-      { id: "name", header: "Name", width: 190, cell: (r) => r.name, sortValue: (r) => r.name },
-      { id: "vhost", header: "Vhost", width: 110, cell: (r) => <span className="text-fg-2">{r.vhost}</span>, sortValue: (r) => r.vhost },
-      { id: "state", header: "State", width: 120, mono: false, cell: (r) => <StateLabel tone={stateTone(r.state)}>{r.state}</StateLabel>, sortValue: (r) => r.state },
-      { id: "src", header: "Source", width: 230, cell: (r) => endpoint(r, "src"), sortValue: (r) => endpoint(r, "src") },
-      { id: "dest", header: "Destination", width: 230, cell: (r) => endpoint(r, "dest"), sortValue: (r) => endpoint(r, "dest") },
-      { id: "protocol", header: "Protocol", width: 100, cell: protocols },
-      { id: "type", header: "Type", width: 80, cell: (r) => r.type, sortValue: (r) => r.type },
-      { id: "reason", header: "Reason", cell: (r) => (r.status?.reason ? <span className="text-danger">{r.status.reason}</span> : "") },
+      { id: "name", header: "name", width: 190, cell: (r) => r.name, sortValue: (r) => r.name },
+      { id: "vhost", header: "vhost", width: 110, cell: (r) => <span className="text-fg-2">{r.vhost}</span>, sortValue: (r) => r.vhost },
+      { id: "state", header: "state", width: 120, mono: false, cell: (r) => <StateLabel tone={stateTone(r.state)}>{r.state}</StateLabel>, sortValue: (r) => r.state },
+      { id: "src", header: "source", width: 230, cell: (r) => endpoint(r, "src"), sortValue: (r) => endpoint(r, "src") },
+      { id: "dest", header: "destination", width: 230, cell: (r) => endpoint(r, "dest"), sortValue: (r) => endpoint(r, "dest") },
+      { id: "protocol", header: "protocol", width: 100, cell: protocols },
+      { id: "type", header: "type", width: 80, cell: (r) => r.type, sortValue: (r) => r.type },
+      { id: "reason", header: "reason", cell: (r) => (r.status?.reason ? <span className="text-danger">{r.status.reason}</span> : "") },
     ],
     [],
   );
@@ -130,7 +130,7 @@ export default function ShovelsSection({ cid, tab, shown }: SectionProps) {
           <ViewTitle icon={Waypoints} name="Shovels" kind={data ? `${int(data.length)} in total · ${running} running` : undefined} />
           <FilterField value={filter} onChange={setFilter} placeholder="Filter by name, vhost or state" className="ml-2" />
           <Spacer />
-          <Button variant="primary" onClick={() => openDialog("create-shovel", { connectionId: cid })} {...mutating(cid)} disabled={readOnly || data === null}>
+          <Button variant="secondary" onClick={() => openDialog("create-shovel", { connectionId: cid })} {...mutating(cid)} disabled={readOnly || data === null}>
             <Plus />
             New shovel
           </Button>
@@ -159,15 +159,15 @@ export default function ShovelsSection({ cid, tab, shown }: SectionProps) {
           >
             <KeyValues
               rows={[
-                ["State", <StateLabel key="s" tone={stateTone(current.state)}>{current.state}</StateLabel>],
-                ["Vhost", current.vhost],
-                ["Node", current.status?.node ? shortNode(current.status.node) : "–"],
-                ["Source", endpoint(current, "src")],
-                ["Source URI", current.status?.src_uri ? maskUri(current.status.src_uri) : "–"],
-                ["Destination", endpoint(current, "dest")],
-                ["Dest URI", current.status?.dest_uri ? maskUri(current.status.dest_uri) : "–"],
-                ["Protocol", protocols(current)],
-                ["Since", current.status?.timestamp ?? "–"],
+                ["state", <StateLabel key="s" tone={stateTone(current.state)}>{current.state}</StateLabel>],
+                ["vhost", current.vhost],
+                ["node", current.status?.node ? shortNode(current.status.node) : <Dash />],
+                ["source", endpoint(current, "src")],
+                ["source URI", current.status?.src_uri ? maskUri(current.status.src_uri) : <Dash />],
+                ["destination", endpoint(current, "dest")],
+                ["dest URI", current.status?.dest_uri ? maskUri(current.status.dest_uri) : <Dash />],
+                ["protocol", protocols(current)],
+                ["since", current.status?.timestamp ?? <Dash />],
               ]}
             />
             {current.status?.reason && (
@@ -179,7 +179,7 @@ export default function ShovelsSection({ cid, tab, shown }: SectionProps) {
             {current.def && (
               <>
                 <SectionHeader>Definition</SectionHeader>
-                <JsonView value={maskDeep(current.def.value)} defaultDepth={2} className="px-3 pb-2" />
+                <TypedTree value={maskDeep(current.def.value) as Record<string, unknown>} open={2} />
               </>
             )}
           </Inspector>

@@ -1,6 +1,6 @@
 import { memo, useCallback, useDeferredValue, useMemo, useState } from "react";
 import { ArrowUpRight, Inbox, Route as RouteIcon, Split } from "lucide-react";
-import { EmptyState, ErrorState, FilterField, KeyValues, Loading, Notice, SectionHeader, Spacer, StateLabel, ViewToolbar } from "@/components/data/parts";
+import { EmptyState, ErrorState, FilterField, KeyValues, Loading, Notice, SectionHeader, Spacer, StateLabel, ViewToolbar, Dash } from "@/components/data/parts";
 import { Inspector } from "@/components/data/Inspector";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -606,8 +606,8 @@ function NodeDetails({
             ["type", node.type ?? "classic"],
             ["messages", c ? compact(c.messages) : "…"],
             ["consumers", c ? c.consumers : "…"],
-            ["policy", q?.policy ?? "none"],
-            ["dead letter", dl ? `${dl.exchange || "(default)"}${dl.routingKey ? ` (${dl.routingKey})` : ""}` : "none"],
+            ["policy", q?.policy ?? <Dash />],
+            ["dead letter", dl ? `${dl.exchange || "(default)"}${dl.routingKey ? ` (${dl.routingKey})` : ""}` : <Dash />],
           ]}
         />
         <SectionHeader>Bindings</SectionHeader>
@@ -620,7 +620,7 @@ function NodeDetails({
     const into = data.bindings.filter((b) => b.destination_type === "exchange" && b.destination === node.name);
     return (
       <>
-        <KeyValues rows={[["type", node.type ?? ""], ["policy", data.exchanges.find((e) => e.name === node.name)?.policy ?? "none"], ["bindings out", from.length], ["bindings in", into.length]]} />
+        <KeyValues rows={[["type", node.type ?? ""], ["policy", data.exchanges.find((e) => e.name === node.name)?.policy ?? <Dash />], ["bindings out", from.length], ["bindings in", into.length]]} />
         <div className="flex gap-2 px-3 pb-2">
           <Button size="sm" onClick={() => onTrace(node.name)}>
             <RouteIcon />

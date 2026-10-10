@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { DataTable, type Column } from "@/components/data/DataTable";
-import { Meter, Tag, type Tone } from "@/components/data/parts";
+import { Meter, Tag, type Tone, Dash } from "@/components/data/parts";
 import { useLive } from "@/hooks/useLive";
 import { rabbit } from "@/lib/rabbit/client";
 import { bytes, duration, int } from "@/lib/rabbit/format";
@@ -46,7 +46,7 @@ const nodes: Column<NodeRow>[] = [
       </>
     ),
   },
-  { id: "type", header: "type", width: 64, sortValue: (n) => n.type, cell: (n) => <span className="text-fg-3">{n.type ?? "–"}</span> },
+  { id: "type", header: "type", width: 64, sortValue: (n) => n.type, cell: (n) => <span className="text-fg-3">{n.type ?? <Dash />}</span> },
   {
     id: "mem",
     header: "memory",
@@ -93,7 +93,7 @@ const nodes: Column<NodeRow>[] = [
           ))}
         </span>
       ) : (
-        <span className="text-fg-3">none</span>
+        <Dash />
       );
     },
   },

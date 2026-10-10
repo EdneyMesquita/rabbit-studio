@@ -1,9 +1,9 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Plug, Unplug } from "lucide-react";
 import { toast } from "sonner";
+import { TypedTree } from "@/components/data/TypedTree";
 import { DataTable, type Column, type SortState } from "@/components/data/DataTable";
 import { Inspector } from "@/components/data/Inspector";
-import { JsonView } from "@/components/data/JsonView";
 import {
   ErrorState,
   FilterField,
@@ -16,6 +16,7 @@ import {
   ViewTitle,
   ViewToolbar,
   type Tone,
+  Dash,
 } from "@/components/data/parts";
 import type { MenuEntry } from "@/components/common/ActionMenu";
 import { Button } from "@/components/ui/button";
@@ -75,8 +76,8 @@ const columns: Column<Connection>[] = [
   { id: "address", header: "address", width: 250, cell: (c) => <span className="text-fg-3">{c.name}</span> },
   { id: "user", header: "user", width: 100, cell: (c) => c.user },
   { id: "vhost", header: "vhost", width: 110, cell: (c) => c.vhost },
-  { id: "state", header: "state", width: 100, mono: false, cell: (c) => <StateLabel tone={stateTone(c.state)}>{c.state ?? "–"}</StateLabel> },
-  { id: "protocol", header: "protocol", width: 100, cell: (c) => <span className="text-json-keyword">{c.protocol ?? "–"}</span> },
+  { id: "state", header: "state", width: 100, mono: false, cell: (c) => <StateLabel tone={stateTone(c.state)}>{c.state ?? <Dash />}</StateLabel> },
+  { id: "protocol", header: "protocol", width: 100, cell: (c) => <span className="text-json-keyword">{c.protocol ?? <Dash />}</span> },
   { id: "tls", header: "tls", width: 54, cell: (c) => (c.ssl ? <span className="text-json-keyword">on</span> : <span className="text-fg-3">off</span>) },
   { id: "channels", header: "channels", align: "right", width: 82, cell: (c) => int(c.channels) },
   { id: "recv", header: "recv", align: "right", width: 90, cell: (c) => <Bytes rate={c.recv_oct_details?.rate} /> },
@@ -85,7 +86,7 @@ const columns: Column<Connection>[] = [
     id: "product",
     header: "client library",
     width: 170,
-    cell: (c) => <span className="text-fg-3">{[c.client_properties?.product, c.client_properties?.version].filter(Boolean).join(" ") || "–"}</span>,
+    cell: (c) => <span className="text-fg-3">{[c.client_properties?.product, c.client_properties?.version].filter(Boolean).join(" ") || <Dash />}</span>,
   },
 ];
 
@@ -269,17 +270,17 @@ const ConnectionInspector = memo(function ConnectionInspector({
       )}
       <KeyValues
         rows={[
-          ["client", [props?.product, props?.version].filter(Boolean).join(" ") || "–"],
-          ["platform", props?.platform ?? "–"],
+          ["client", [props?.product, props?.version].filter(Boolean).join(" ") || <Dash />],
+          ["platform", props?.platform ?? <Dash />],
           ["user", c.user],
           ["vhost", c.vhost],
           ["node", c.node],
-          ["protocol", c.protocol ?? "–"],
+          ["protocol", c.protocol ?? <Dash />],
           ["tls", c.ssl ? "yes" : "no"],
-          ["auth", c.auth_mechanism ?? "–"],
-          ["heartbeat", c.timeout != null ? `${c.timeout} s` : "–"],
+          ["auth", c.auth_mechanism ?? <Dash />],
+          ["heartbeat", c.timeout != null ? `${c.timeout} s` : <Dash />],
           ["frame max", int(c.frame_max)],
-          ["connected", c.connected_at ? ago(c.connected_at) : "–"],
+          ["connected", c.connected_at ? ago(c.connected_at) : <Dash />],
           ["recv", <Bytes key="r" rate={c.recv_oct_details?.rate} />],
           ["send", <Bytes key="s" rate={c.send_oct_details?.rate} />],
         ]}
@@ -309,7 +310,7 @@ const ConnectionInspector = memo(function ConnectionInspector({
       </table>
       <SectionHeader>Client properties</SectionHeader>
       <div className="px-3 py-2">
-        <JsonView value={props ?? {}} defaultDepth={1} />
+        <TypedTree value={(props ?? {}) as Record<string, unknown>} open={1} />
       </div>
     </Inspector>
   );

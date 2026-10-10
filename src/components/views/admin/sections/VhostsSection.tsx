@@ -2,7 +2,7 @@ import { memo, useCallback, useMemo, useState } from "react";
 import { Layers, Plus, Trash2 } from "lucide-react";
 import { DataTable, type Column } from "@/components/data/DataTable";
 import { Inspector } from "@/components/data/Inspector";
-import { ErrorState, FilterField, KeyValues, Loading, SectionHeader, Spacer, StateLabel, Tag, ViewTitle, ViewToolbar } from "@/components/data/parts";
+import { ErrorState, FilterField, KeyValues, Loading, SectionHeader, Spacer, StateLabel, Tag, ViewTitle, ViewToolbar, Dash } from "@/components/data/parts";
 import type { MenuEntry } from "@/components/common/ActionMenu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,21 +98,21 @@ export default function VhostsSection({ cid, tab, shown }: SectionProps) {
 
   const columns = useMemo<Column<VhostRow>[]>(
     () => [
-      { id: "name", header: "Name", width: 170, cell: (r) => r.name, sortValue: (r) => r.name },
-      { id: "description", header: "Description", width: 240, mono: false, cell: (r) => r.v.description ?? r.v.metadata?.description ?? "", sortValue: (r) => r.v.description },
+      { id: "name", header: "name", width: 170, cell: (r) => r.name, sortValue: (r) => r.name },
+      { id: "description", header: "description", width: 240, mono: false, cell: (r) => r.v.description ?? r.v.metadata?.description ?? "", sortValue: (r) => r.v.description },
       {
         id: "tags",
-        header: "Tags",
+        header: "tags",
         width: 140,
-        cell: (r) => (r.tags.length ? <span className="inline-flex gap-1">{r.tags.map((t) => <Tag key={t}>{t}</Tag>)}</span> : <span className="text-fg-3">none</span>),
+        cell: (r) => (r.tags.length ? <span className="inline-flex gap-1">{r.tags.map((t) => <Tag key={t}>{t}</Tag>)}</span> : <Dash />),
       },
-      { id: "type", header: "Queue type", width: 100, cell: (r) => r.queueType, sortValue: (r) => r.queueType },
-      { id: "ready", header: "Ready", align: "right", width: 90, cell: (r) => int(r.v.messages_ready), sortValue: (r) => r.v.messages_ready },
-      { id: "unacked", header: "Unacked", align: "right", width: 90, cell: (r) => int(r.v.messages_unacknowledged), sortValue: (r) => r.v.messages_unacknowledged },
-      { id: "total", header: "Total", align: "right", width: 90, cell: (r) => int(r.v.messages), sortValue: (r) => r.v.messages },
+      { id: "type", header: "queue type", width: 100, cell: (r) => r.queueType, sortValue: (r) => r.queueType },
+      { id: "ready", header: "ready", align: "right", width: 90, cell: (r) => int(r.v.messages_ready), sortValue: (r) => r.v.messages_ready },
+      { id: "unacked", header: "unacked", align: "right", width: 90, cell: (r) => int(r.v.messages_unacknowledged), sortValue: (r) => r.v.messages_unacknowledged },
+      { id: "total", header: "total", align: "right", width: 90, cell: (r) => int(r.v.messages), sortValue: (r) => r.v.messages },
       {
         id: "in",
-        header: "Publish",
+        header: "publish",
         align: "right",
         width: 90,
         cell: (r) => rate(r.v.message_stats?.publish_details?.rate),
@@ -120,7 +120,7 @@ export default function VhostsSection({ cid, tab, shown }: SectionProps) {
       },
       {
         id: "out",
-        header: "Deliver",
+        header: "deliver",
         align: "right",
         width: 90,
         cell: (r) => rate(r.v.message_stats?.deliver_get_details?.rate),
@@ -128,7 +128,7 @@ export default function VhostsSection({ cid, tab, shown }: SectionProps) {
       },
       {
         id: "state",
-        header: "Cluster state",
+        header: "cluster state",
         width: 140,
         mono: false,
         cell: (r) => {
@@ -176,7 +176,7 @@ export default function VhostsSection({ cid, tab, shown }: SectionProps) {
           <ViewTitle icon={Layers} name="Virtual hosts" kind={`${int(live.data?.length ?? 0)} in total`} />
           <FilterField value={filter} onChange={setFilter} placeholder="Filter by name or description" className="ml-2" />
           <Spacer />
-          <Button variant="primary" onClick={() => openDialog("create-vhost", { connectionId: cid })} {...mutating(cid)}>
+          <Button variant="secondary" onClick={() => openDialog("create-vhost", { connectionId: cid })} {...mutating(cid)}>
             <Plus />
             New virtual host
           </Button>
@@ -248,9 +248,9 @@ const VhostInspector = memo(function VhostInspector({
     >
       <KeyValues
         rows={[
-          ["Cluster state", <StateLabel key="s" tone={state.tone}>{state.text}</StateLabel>],
-          ["Nodes", Object.keys(row.v.cluster_state ?? {}).map(shortNode).join(", ") || "–"],
-          ["Protected", protectedVhost ? "yes" : "no"],
+          ["cluster state", <StateLabel key="s" tone={state.tone}>{state.text}</StateLabel>],
+          ["nodes", Object.keys(row.v.cluster_state ?? {}).map(shortNode).join(", ") || <Dash />],
+          ["protected", protectedVhost ? "yes" : "no"],
         ]}
       />
 

@@ -2,7 +2,7 @@ import { memo, useCallback, useMemo, useState } from "react";
 import { Plus, Trash2, Users } from "lucide-react";
 import { DataTable, type Column } from "@/components/data/DataTable";
 import { Inspector } from "@/components/data/Inspector";
-import { EmptyState, ErrorState, FilterField, Loading, SectionHeader, Spacer, Tag, ViewTitle, ViewToolbar } from "@/components/data/parts";
+import { EmptyState, ErrorState, FilterField, Loading, SectionHeader, Spacer, Tag, ViewTitle, ViewToolbar, Dash } from "@/components/data/parts";
 import type { MenuEntry } from "@/components/common/ActionMenu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,10 +88,10 @@ export default function UsersSection({ cid, tab, shown }: SectionProps) {
 
   const columns = useMemo<Column<UserRow>[]>(
     () => [
-      { id: "name", header: "Name", width: 190, cell: (r) => r.name, sortValue: (r) => r.name },
+      { id: "name", header: "name", width: 190, cell: (r) => r.name, sortValue: (r) => r.name },
       {
         id: "tags",
-        header: "Tags",
+        header: "tags",
         width: 230,
         cell: (r) =>
           r.tags.length ? (
@@ -101,31 +101,31 @@ export default function UsersSection({ cid, tab, shown }: SectionProps) {
               ))}
             </span>
           ) : (
-            <span className="text-fg-3">none</span>
+            <Dash />
           ),
         sortValue: (r) => r.tags.join(","),
       },
       {
         id: "vhosts",
-        header: "Can access vhosts",
-        cell: (r) => (r.perms.length ? r.perms.map((p) => p.vhost).join(", ") : <span className="text-fg-3">none</span>),
+        header: "can access vhosts",
+        cell: (r) => (r.perms.length ? r.perms.map((p) => p.vhost).join(", ") : <Dash />),
         sortValue: (r) => r.perms.length,
       },
       {
         id: "password",
-        header: "Password",
+        header: "password",
         width: 90,
         mono: false,
-        cell: (r) => (r.hasPassword ? "set" : <span className="text-fg-3">none</span>),
+        cell: (r) => (r.hasPassword ? "set" : <Dash />),
         sortValue: (r) => (r.hasPassword ? 1 : 0),
       },
       {
         id: "limits",
-        header: "Limits",
+        header: "limits",
         width: 190,
         cell: (r) => {
           const e = Object.entries(r.limits);
-          return e.length ? e.map(([k, v]) => `${k.replace("max-", "")} ${int(v)}`).join(", ") : <span className="text-fg-3">none</span>;
+          return e.length ? e.map(([k, v]) => `${k.replace("max-", "")} ${int(v)}`).join(", ") : <Dash />;
         },
       },
     ],
@@ -182,7 +182,7 @@ export default function UsersSection({ cid, tab, shown }: SectionProps) {
               Delete {selected.size} users
             </Button>
           )}
-          <Button variant="primary" onClick={newUser} {...mutating(cid)}>
+          <Button variant="secondary" onClick={newUser} {...mutating(cid)}>
             <Plus />
             New user
           </Button>

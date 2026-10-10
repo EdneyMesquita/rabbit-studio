@@ -1,7 +1,7 @@
 import { Fragment, memo, useCallback, useMemo, useState } from "react";
-import { LayoutGrid } from "lucide-react";
-import { samplesOf } from "@/components/charts/TimeSeriesChart";
-import { Metrics, SectionHeader, StateLabel, ViewTitle, ViewToolbar, type MetricItem, type Tone } from "@/components/data/parts";
+import { TimeSeriesChart, rateSamples, samplesOf } from "@/components/charts/TimeSeriesChart";
+import { Inspector } from "@/components/data/Inspector";
+import { Dash, Metrics, SectionHeader, StateLabel, type MetricItem, type Tone } from "@/components/data/parts";
 import { Button } from "@/components/ui/button";
 import { ConnectionChip } from "@/components/ui/ConnectionChip";
 import { connectionColor } from "@/lib/connectionColor";
@@ -36,13 +36,39 @@ interface Part<T> {
   error: string | null;
 }
 
-// Only totals and five minutes of queue depth: the cheapest answer that fills a row.
-const OVERVIEW_COLUMNS = "cluster_name,rabbitmq_version,queue_totals,object_totals,message_stats.publish_details.rate,message_stats.deliver_get_details.rate";
+// Totals, five minutes of queue depth and ten of publish/deliver samples (the throughput chart): the cheapest answer that fills a row.
+const OVERVIEW_COLUMNS = "cluster_name,rabbitmq_version,queue_totals,object_totals,message_stats.publish_details,message_stats.deliver_get_details";
 
 function fetchOverview(connectionId: string): Promise<Overview> {
   return rabbit(connectionId).get<Overview>(
-    withQuery(paths.overview, { columns: OVERVIEW_COLUMNS, lengths_age: 300, lengths_incr: 10 }),
+    withQuery(paths.overview, {
+      columns: OVERVIEW_COLUMNS,
+      lengths_age: 300,
+      lengths_incr: 10,
+      msg_rates_age: 600,
+      msg_rates_incr: 10,
+    }),
   );
+}
+
+/** Samples of one rate per cluster, summed by timestamp bucket (clusters sample on their own clocks). */
+function sumRates(perCluster: { t: number; v: number }[][]): { t: number; v: number }[] {
+  const buckets = new Map<number, { v: number; n: number }>();
+  for (const points of perCluster) {
+    for (const p of points) {
+      const t = Math.round(p.t / 10_000) * 10_000;
+      const b = buckets.get(t) ?? { v: 0, n: 0 };
+      b.v += p.v;
+      b.n++;
+      buckets.set(t, b);
+    }
+  }
+  // A bucket some cluster missed would dip the line: keep the full ones.
+  const full = Math.max(0, ...[...buckets.values()].map((b) => b.n));
+  return [...buckets.entries()]
+    .filter(([, b]) => b.n === full)
+    .map(([t, b]) => ({ t, v: b.v }))
+    .sort((a, b) => a.t - b.t);
 }
 
 type Health = { tone: Tone; label: string };
@@ -92,7 +118,10 @@ export default function GlobalView({ shown }: ViewProps) {
 
   const groups = useMemo(
     () =>
-      ENVIRONMENTS.map((env) => ({ ...env, profiles: profiles.filter((p) => p.environment === env.id) })).filter((g) => g.profiles.length),
+      ENVIRONMENTS.map((env) => ({
+        ...env,
+        profiles: profiles.filter((p) => p.environment === env.id),
+      })).filter((g) => g.profiles.length),
     [profiles],
   );
 
@@ -132,7 +161,19 @@ export default function GlobalView({ shown }: ViewProps) {
         }
       }
     }
-    return { publish, deliver, ready, queues, connections, consumers, dead, deadQueues, ok, degraded, down };
+    return {
+      publish,
+      deliver,
+      ready,
+      queues,
+      connections,
+      consumers,
+      dead,
+      deadQueues,
+      ok,
+      degraded,
+      down,
+    };
   }, [connected, entries]);
 
   const metrics: MetricItem[] = [
@@ -141,11 +182,44 @@ export default function GlobalView({ shown }: ViewProps) {
       value: int(profiles.length),
       detail: `${connected.length} connected${totals.degraded ? `, ${totals.degraded} degraded` : ""}${totals.down ? `, ${totals.down} down` : ""}`,
     },
-    { label: "Publish, all clusters", value: rate(totals.publish), detail: `deliver ${rate(totals.deliver)}` },
-    { label: "Ready", value: compact(totals.ready), detail: `across ${int(totals.queues)} queues` },
-    { label: "Dead-lettered", value: int(totals.dead), tone: totals.dead ? "warn" : undefined, detail: `in ${totals.deadQueues} DLQs` },
-    { label: "Connections", value: int(totals.connections), detail: `${int(totals.consumers)} consumers` },
+    {
+      label: "Publish, all clusters",
+      value: rate(totals.publish),
+      detail: `deliver ${rate(totals.deliver)}`,
+    },
+    {
+      label: "Ready",
+      value: compact(totals.ready),
+      detail: `across ${int(totals.queues)} queues`,
+    },
+    {
+      label: "Dead-lettered",
+      value: int(totals.dead),
+      tone: totals.dead ? "warn" : undefined,
+      detail: `in ${totals.deadQueues} DLQs`,
+    },
+    {
+      label: "Connections",
+      value: int(totals.connections),
+      detail: `${int(totals.consumers)} consumers`,
+    },
   ];
+
+  const throughput = useMemo(() => {
+    const ovs = connected.map((p) => entries[p.id]?.data?.overview).filter((o): o is Overview => !!o);
+    return [
+      {
+        label: "Publish",
+        color: "s1" as const,
+        points: sumRates(ovs.map((o) => rateSamples(o.message_stats?.publish_details))),
+      },
+      {
+        label: "Deliver",
+        color: "s2" as const,
+        points: sumRates(ovs.map((o) => rateSamples(o.message_stats?.deliver_get_details))),
+      },
+    ];
+  }, [connected, entries]);
 
   const clusterCount = new Set(problems.map((p) => p.connectionId)).size;
 
@@ -170,71 +244,101 @@ export default function GlobalView({ shown }: ViewProps) {
             />
           </Fragment>
         ))}
-      <ViewToolbar>
-        <ViewTitle icon={LayoutGrid} name="All clusters" kind="Workspace" />
-      </ViewToolbar>
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <Metrics items={metrics} />
-        {profiles.length === 0 ? (
-          <p className="px-3 py-3 text-sm text-fg-3">No connections yet. Add one from the Explorer to see it here.</p>
-        ) : (
-          <table className="w-full min-w-max table-fixed border-separate border-spacing-0 font-data" aria-label="Clusters">
-            <colgroup>
-              <col style={{ width: 210 }} />
-              <col style={{ width: 130 }} />
-              <col style={{ width: 150 }} />
-              <col style={{ width: 70 }} />
-              <col style={{ width: 70 }} />
-              <col style={{ width: 90 }} />
-              <col style={{ width: 90 }} />
-              <col style={{ width: 80 }} />
-              <col style={{ width: 80 }} />
-              <col style={{ width: 70 }} />
-              <col style={{ width: 80 }} />
-              <col style={{ width: 120 }} />
-            </colgroup>
-            <thead>
-              <tr>
-                {["connection", "status", "cluster", "version", "nodes", "publish", "deliver", "ready", "unacked", "conns", "problems", "queue depth"].map((h, i) => (
-                  <th
-                    key={h}
-                    scope="col"
-                    className={cn(
-                      "sticky top-0 z-[2] h-[30px] border-r border-b border-r-line-soft border-b-line bg-panel px-2.5 font-sans text-sm font-medium whitespace-nowrap text-fg-2 last:border-r-0",
-                      i >= 5 && i <= 10 ? "text-right" : "text-left",
+      <div className="flex min-h-0 flex-1">
+        <div className="min-w-0 flex-1 overflow-auto">
+          <Metrics items={metrics} />
+          {profiles.length === 0 ? (
+            <p className="px-3 py-3 text-sm text-fg-3">No connections yet. Add one from the Explorer to see it here.</p>
+          ) : (
+            <table className="w-full min-w-max table-fixed border-separate border-spacing-0 font-data" aria-label="Clusters">
+              <colgroup>
+                <col style={{ width: 210 }} />
+                <col style={{ width: 130 }} />
+                <col style={{ width: 150 }} />
+                <col style={{ width: 70 }} />
+                <col style={{ width: 70 }} />
+                <col style={{ width: 90 }} />
+                <col style={{ width: 90 }} />
+                <col style={{ width: 80 }} />
+                <col style={{ width: 80 }} />
+                <col style={{ width: 70 }} />
+                <col style={{ width: 80 }} />
+                <col style={{ width: 120 }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  {[
+                    "connection",
+                    "status",
+                    "cluster",
+                    "version",
+                    "nodes",
+                    "publish",
+                    "deliver",
+                    "ready",
+                    "unacked",
+                    "conns",
+                    "problems",
+                    "queue depth",
+                  ].map((h, i) => (
+                    <th
+                      key={h}
+                      scope="col"
+                      className={cn(
+                        "sticky top-0 z-[2] h-[30px] border-r border-b border-r-line-soft border-b-line bg-panel px-2.5 font-sans text-sm font-medium whitespace-nowrap text-fg-2 last:border-r-0",
+                        i >= 5 && i <= 10 ? "text-right" : "text-left",
+                      )}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {groups.map((g) => (
+                  <GroupRows key={g.id} label={g.label} profiles={g.profiles}>
+                    {(p) => (
+                      <ClusterRow
+                        key={p.id}
+                        profile={p}
+                        connected={!!sessions[p.id]}
+                        connecting={!!connecting[p.id]}
+                        connectError={connectErrors[p.id]}
+                        entry={entries[p.id]}
+                        problemCount={problems.filter((x) => x.connectionId === p.id).length}
+                        hasCrit={problems.some((x) => x.connectionId === p.id && x.problem.severity === "crit")}
+                      />
                     )}
-                  >
-                    {h}
-                  </th>
+                  </GroupRows>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {groups.map((g) => (
-                <GroupRows key={g.id} label={g.label} profiles={g.profiles}>
-                  {(p) => (
-                    <ClusterRow
-                      key={p.id}
-                      profile={p}
-                      connected={!!sessions[p.id]}
-                      connecting={!!connecting[p.id]}
-                      connectError={connectErrors[p.id]}
-                      entry={entries[p.id]}
-                      problemCount={problems.filter((x) => x.connectionId === p.id).length}
-                      hasCrit={problems.some((x) => x.connectionId === p.id && x.problem.severity === "crit")}
-                    />
-                  )}
-                </GroupRows>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </tbody>
+            </table>
+          )}
+          {connected.length > 0 && (
+            <>
+              <SectionHeader actions={<span className="font-normal">msg/s</span>}>Throughput, all reachable clusters</SectionHeader>
+              <div className="px-3 pt-1 pb-3">
+                <TimeSeriesChart
+                  series={throughput}
+                  height={120}
+                  format={rate}
+                  label="Publish and deliver rates summed over all reachable clusters, last 10 minutes"
+                />
+              </div>
+            </>
+          )}
+        </div>
         {connected.length > 0 && (
-          <>
-            <SectionHeader actions={<span className="font-normal normal-case">{problems.length} across {clusterCount} clusters</span>}>Problems</SectionHeader>
+          <Inspector
+            label="Problems"
+            title="Problems"
+            subtitle={`${problems.length} across ${clusterCount} ${clusterCount === 1 ? "cluster" : "clusters"}`}
+          >
             {problems.length ? <ClusterProblemList items={problems} /> : <p className="px-3 py-2 text-sm text-fg-3">Nothing needs attention.</p>}
-            <div className="px-3 py-1.5 text-xs text-fg-3">Sorted by severity, production first.</div>
-          </>
+            <div className="sticky bottom-0 border-t border-line-soft bg-editor px-3 py-[7px] text-xs text-fg-3">
+              Sorted by severity, production first
+            </div>
+          </Inspector>
         )}
       </div>
     </div>
@@ -293,15 +397,11 @@ const ClusterRow = memo(function ClusterRow({
   const o = snap?.overview;
   const nodes = snap?.inputs.nodes ?? [];
   const open = () => connected && openOn(profile.id, { kind: "overview" });
-  const dash = <span className="text-fg-3">–</span>;
+  const dash = <Dash />;
   const depth = useMemo(() => samplesOf(o?.queue_totals?.messages_details), [o]);
 
   return (
-    <tr
-      className={cn("group/row", connected ? "cursor-pointer" : "cursor-default")}
-      onClick={open}
-      title={connectError}
-    >
+    <tr className={cn("group/row", connected ? "cursor-pointer" : "cursor-default")} onClick={open} title={connectError}>
       <td className={cn(td, "group-hover/row:bg-row-hover")}>
         <span className="inline-flex items-center gap-2 font-sans text-base text-fg">
           <ConnectionChip name={profile.name} color={color} size="sm" />
@@ -360,7 +460,7 @@ const Sparkline = memo(function Sparkline({ points, label }: { points: { t: numb
     const max = Math.max(...points.map((p) => p.v), 1);
     return points.map((p, i) => `${i ? "L" : "M"}${(((p.t - t0) / span) * 100).toFixed(1)} ${(18 - (p.v / max) * 16).toFixed(1)}`).join("");
   }, [points]);
-  if (!d) return <span className="text-fg-3">–</span>;
+  if (!d) return <Dash />;
   return (
     <svg viewBox="0 0 100 20" preserveAspectRatio="none" className="block h-5 w-full" role="img" aria-label={label}>
       <path d={d} fill="none" stroke="var(--t-s1)" strokeWidth={1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />

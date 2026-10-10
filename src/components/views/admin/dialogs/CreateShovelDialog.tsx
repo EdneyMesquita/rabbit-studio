@@ -49,7 +49,7 @@ function EndFields({ id, title, end, onChange, source }: { id: string; title: st
   const set = (patch: Partial<End>) => onChange({ ...end, ...patch });
   return (
     <fieldset className="flex flex-col gap-2 rounded-md border border-line p-3">
-      <legend className="px-1 text-xs font-semibold tracking-[0.02em] text-fg-2 uppercase">{title}</legend>
+      <legend className="px-1 text-xs font-semibold text-fg-2">{title}</legend>
       <Field label="URI" htmlFor={`${id}-uri`} help={'"amqp://" alone is this broker, on the shovel\'s own vhost. One URI per line to list fallbacks.'}>
         <Textarea id={`${id}-uri`} rows={1} spellCheck={false} className="min-h-8 font-mono text-[12px]" value={end.uri} onChange={(e) => set({ uri: e.target.value })} />
       </Field>

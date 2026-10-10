@@ -3,8 +3,8 @@ import { Link2, Split, Trash2, Waypoints } from "lucide-react";
 import { toast } from "sonner";
 import { ActionMenuButton } from "@/components/common/ActionMenu";
 import { TimeSeriesChart, rateSamples } from "@/components/charts/TimeSeriesChart";
+import { TypedTree } from "@/components/data/TypedTree";
 import { DataTable, type Column } from "@/components/data/DataTable";
-import { JsonView } from "@/components/data/JsonView";
 import {
   EmptyState,
   ErrorState,
@@ -16,6 +16,7 @@ import {
   Tag,
   ViewTitle,
   ViewToolbar,
+  Dash,
 } from "@/components/data/parts";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -210,12 +211,12 @@ function Body({
               ["durable", String(e.durable)],
               ["auto_delete", String(e.auto_delete)],
               ["internal", String(e.internal)],
-              ["policy", e.policy ?? "none"],
+              ["policy", e.policy ?? <Dash />],
             ]}
           />
           <SectionHeader>Arguments</SectionHeader>
           <div className="px-3 py-2">
-            {custom ? <JsonView value={e.arguments} /> : <div className="text-sm text-fg-3">No arguments.</div>}
+            {custom ? <TypedTree value={e.arguments} open={1} /> : <div className="text-sm text-fg-3">No arguments.</div>}
           </div>
         </div>
       )}
