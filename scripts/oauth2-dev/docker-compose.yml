@@ -1,0 +1,11 @@
+services:
+  rabbit-oauth:
+    image: rabbitmq:4.2-management
+    container_name: rabbit-studio-oauth
+    ports:
+      - "127.0.0.1:15677:15672"
+      - "127.0.0.1:5677:5672"
+    volumes:
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./public.pem:/etc/rabbitmq/keys/public.pem:ro

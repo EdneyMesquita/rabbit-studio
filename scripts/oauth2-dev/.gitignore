@@ -1,0 +1,3 @@
+*.pem
+token-server.pid
+token-server.log
