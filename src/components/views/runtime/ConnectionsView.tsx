@@ -127,6 +127,7 @@ export default function ConnectionsView({ tab, shown }: ViewProps) {
     async (cs: Connection[]) => {
       const ok = await confirmDestructive(cid, {
         title: cs.length === 1 ? "Close connection" : `Close ${cs.length} connections`,
+        guard: cs.length === 1 ? clientName(cs[0]) : undefined,
         message:
           cs.length === 1
             ? `This closes ${clientName(cs[0])} (${cs[0].name}). Its channels and consumers go with it; well-behaved clients reconnect.`
