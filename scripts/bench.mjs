@@ -1,15 +1,14 @@
 #!/usr/bin/env node
 // Backend benchmark through the dev bridge (src-tauri/src/devbridge.rs):
-// the same commands and the same JSON serialization the app's IPC uses, so
-// before/after numbers of an optimization are comparable.
+// the same commands and the same IPC path the app uses, so before/after
+// numbers of an optimization are comparable.
 //
-//   docker compose -f docker-compose.dev.yml up -d
+//   docker compose -f docker-compose.dev.yml up -d && scripts/seed-dev.sh
 //   (cd src-tauri && cargo build --release --features devbridge --bin devbridge)
 //   src-tauri/target/release/devbridge &
 //   node scripts/bench.mjs <connection id> [--runs 5] [--json out.json]
 //
-// Needs a `bench` database on the connection's server with a `big` table:
-//   create table big as select g as id, md5(g::text) as hash, ... from generate_series(1, 1000000) g;
+// Point it at dev cluster A (its `orders` vhost and `orders.dlq` queue).
 
 import { execSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
@@ -48,51 +47,30 @@ const mb = (b) => (b / 1024 / 1024).toFixed(1);
 
 const { value: session } = await call("connect", { id: connectionId });
 const sessionId = session.sessionId;
-const db = "bench";
+const mgmt = (path) => () => call("mgmt", { sessionId, methodName: "GET", path });
+const sampled = "lengths_age=600&lengths_incr=10&msg_rates_age=600&msg_rates_incr=10";
 
 const cases = [
-  ["list databases", () => call("list_databases", { sessionId })],
-  ["list schema objects", () => call("list_schema_objects", { sessionId, database: db, schema: "public" })],
-  ["describe big", () => call("describe_table", { sessionId, database: db, schema: "public", table: "big" })],
-  [
-    "browse 100 rows",
-    () =>
-      call("browse_table", {
-        sessionId, database: db, schema: "public", table: "big",
-        input: { whereClause: null, orderBy: "id", limit: 100, offset: 0 }, executionId: null,
-      }),
-  ],
-  [
-    "browse 1000 rows, deep offset",
-    () =>
-      call("browse_table", {
-        sessionId, database: db, schema: "public", table: "big",
-        input: { whereClause: "qty > 1000", orderBy: "id", limit: 1000, offset: 500000 }, executionId: null,
-      }),
-  ],
-  ["count with filter", () => call("count_rows", { sessionId, database: db, schema: "public", table: "big", whereClause: "flag", executionId: null })],
-  ...[1000, 10000, 100000].map((n) => [
-    `run_sql ${n} rows`,
-    () => call("run_sql", { sessionId, database: db, tabId: "bench", sql: `SELECT * FROM big LIMIT ${n}`, caret: null, rowLimit: n, executionId: null }),
-  ]),
-  [
-    "run_sql 1M rows, capped at 1000",
-    () => call("run_sql", { sessionId, database: db, tabId: "bench", sql: "SELECT * FROM big", caret: null, rowLimit: 1000, executionId: null }),
-  ],
-  [
-    "run_sql 200 small statements",
-    () =>
-      call("run_sql", {
-        sessionId, database: db, tabId: "bench",
-        sql: Array.from({ length: 200 }, (_, i) => `SELECT ${i} AS n;`).join("\n"), caret: null, rowLimit: 1000, executionId: null,
-      }),
-  ],
+  ["overview, sampled", mgmt(`overview?${sampled}`)],
+  ["nodes", mgmt("nodes")],
+  ["queues page (500, columns)", mgmt("queues?page=1&page_size=500&columns=name,vhost,type,messages,messages_ready,messages_unacknowledged,consumers")],
+  ["queues, everything", mgmt("queues")],
+  ["queue detail, sampled", mgmt(`queues/orders/orders.created?${sampled}`)],
+  ["exchanges + bindings (orders)", async () => {
+    const a = await mgmt("exchanges/orders")();
+    const b = await mgmt("bindings/orders")();
+    return { value: null, ms: a.ms + b.ms, bytes: a.bytes + b.bytes };
+  }],
+  ["peek 50 messages", () => call("get_messages", { sessionId, vhost: "orders", queue: "orders.dlq", count: 50, requeue: true, truncate: null })],
+  ["read stream, 200 from first", () => call("read_stream", {
+    sessionId, executionId: "bench", vhost: "orders", queue: "orders.audit", offset: { kind: "first" }, count: 200, truncate: null,
+  })],
 ];
 
 const rssBefore = bridgeRss();
 const results = [];
 for (const [name, fn] of cases) {
-  await fn(); // warm up: plans, catalog caches, connections
+  await fn(); // warm up: connections, the broker's caches
   const times = [];
   let bytes = 0;
   for (let i = 0; i < runs; i++) {
@@ -106,5 +84,5 @@ for (const [name, fn] of cases) {
 }
 const rssAfter = bridgeRss();
 if (rssBefore !== null) console.log(`devbridge RSS: ${mb(rssBefore)} MB before, ${mb(rssAfter)} MB after`);
-await call("release_tab", { sessionId, tabId: "bench" }).catch(() => {});
+await call("disconnect", { sessionId }).catch(() => {});
 if (jsonOut) writeFileSync(jsonOut, JSON.stringify({ runs, results, rssBefore, rssAfter }, null, 2));
