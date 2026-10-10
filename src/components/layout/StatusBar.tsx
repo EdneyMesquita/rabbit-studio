@@ -98,7 +98,7 @@ export function StatusBar() {
         </StatusItem>
       )}
       {active?.profile?.typedConfirmation && !session?.readOnly && (
-        <StatusItem className="max-[1100px]:hidden" title="Purge, delete and the like ask for the connection's name">
+        <StatusItem className="max-[1100px]:hidden" title="Purge, delete and the like ask for the object's name to be typed">
           <ShieldAlert className="size-3" />
           Destructive actions ask for the name
         </StatusItem>

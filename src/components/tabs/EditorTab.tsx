@@ -37,8 +37,18 @@ export function EditorTab({ tab, active, entries, pane = null, paneFocused = fal
   const mono = tab.kind === "queue" || tab.kind === "exchange";
 
   // A tab opened from the Explorer or the palette may land past the strip's edge.
+  // Scrolls only the strip: scrollIntoView would also scroll every clipped
+  // ancestor (the editor's <main>), shifting the whole view sideways.
   useEffect(() => {
-    if (active) ref.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const el = ref.current;
+    if (!active || !el) return;
+    let strip = el.parentElement;
+    while (strip && strip.scrollWidth <= strip.clientWidth) strip = strip.parentElement;
+    if (!strip || strip.tagName === "MAIN") return;
+    const a = el.getBoundingClientRect();
+    const b = strip.getBoundingClientRect();
+    if (a.left < b.left) strip.scrollLeft -= b.left - a.left;
+    else if (a.right > b.right) strip.scrollLeft += a.right - b.right;
   }, [active]);
 
   return (
