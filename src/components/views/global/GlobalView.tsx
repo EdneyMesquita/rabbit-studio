@@ -255,8 +255,8 @@ export default function GlobalView({ shown }: ViewProps) {
                 {/* Compact, so the numbers fit beside the problems inspector. */}
                 <col style={{ width: 172 }} />
                 <col style={{ width: 100 }} />
-                <col style={{ width: 120 }} />
-                <col style={{ width: 56 }} />
+                <col style={{ width: 112 }} />
+                <col style={{ width: 64 }} />
                 <col style={{ width: 52 }} />
                 <col style={{ width: 64 }} />
                 <col style={{ width: 64 }} />
